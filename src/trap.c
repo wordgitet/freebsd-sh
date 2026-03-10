@@ -275,7 +275,8 @@ setsignal(int signo)
 			if (debug)
 				break;
 #endif
-			action = S_CATCH;
+			if (rootshell && iflag)
+				action = S_IGN;
 			break;
 		case SIGTERM:
 			if (rootshell && iflag)

@@ -599,7 +599,7 @@ waitcmdloop(struct job *job)
 					break;
 			}
 		}
-	} while (dowait(DOWAIT_BLOCK | DOWAIT_SIG, (struct job *)NULL) != -1);
+	} while (dowait(DOWAIT_BLOCK | DOWAIT_SIG, job) != -1);
 
 	sig = pendingsig_waitcmd;
 	pendingsig_waitcmd = 0;
@@ -988,7 +988,7 @@ forkshell(struct job *jp, union node *n, int mode)
 		ps->pid = pid;
 		ps->status = -1;
 		ps->cmd = nullstr;
-		if (iflag && rootshell && n)
+		if (jobctl && n)
 			ps->cmd = commandtext(n);
 		jp->foreground = mode == FORK_FG;
 #if JOBS
@@ -1266,7 +1266,7 @@ dowait(int mode, struct job *job)
 	INTON;
 	if (!thisjob || thisjob->state == 0)
 		;
-	else if ((!rootshell || !iflag || thisjob == job) &&
+	else if (iflag && (!rootshell || thisjob == job) &&
 	    thisjob->foreground && thisjob->state != JOBSTOPPED) {
 		sig = 0;
 		coredump = 0;
