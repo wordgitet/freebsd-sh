@@ -1,0 +1,28 @@
+freebsd-sh
+
+Standalone Meson-based extraction of the FreeBSD sh shell from chimerautils.
+
+Build:
+
+meson setup build
+meson compile -C build
+
+Build without libedit history and line editing:
+
+meson setup build-noedit -Dlibedit=disabled
+meson compile -C build-noedit
+
+Run:
+
+./build/src/sh -c 'echo ok'
+
+Layout:
+
+src/         shell core plus generator inputs and scripts
+src/bltin/   builtin implementations (echo, kill, printf, test)
+src/compat/  minimal portability shims used by this extracted tree
+include/     compatibility headers copied from chimerautils
+
+Provenance:
+
+See UPSTREAM.md for the exact upstream commit and copied paths.

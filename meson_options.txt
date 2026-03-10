@@ -1,0 +1,6 @@
+option(
+    'libedit',
+    type: 'feature',
+    value: 'auto',
+    description: 'Enable libedit-backed history and line editing support',
+)
