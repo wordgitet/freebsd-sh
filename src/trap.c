@@ -71,6 +71,7 @@
 static char sigmode[NSIG];	/* current value of signal */
 volatile sig_atomic_t pendingsig;	/* indicates some signal received */
 volatile sig_atomic_t pendingsig_waitcmd;	/* indicates wait builtin should be interrupted */
+volatile sig_atomic_t gotsigchld;	/* indicates a child status change was delivered */
 static int in_dotrap;			/* do we execute in a trap handler? */
 static char *volatile trap[NSIG];	/* trap handler commands */
 static volatile sig_atomic_t gotsig[NSIG];
@@ -289,6 +290,8 @@ setsignal(int signo)
 #endif
 		}
 	}
+	if (signo == SIGCHLD)
+		action = S_CATCH;
 
 	t = &sigmode[signo];
 	if (*t == 0) {
@@ -373,6 +376,9 @@ issigchldtrapped(void)
 void
 onsig(int signo)
 {
+
+	if (signo == SIGCHLD)
+		gotsigchld = 1;
 
 	if (signo == SIGINT && trap[SIGINT] == NULL) {
 		if (suppressint)
@@ -470,6 +476,7 @@ dotrap(void)
 void
 trap_init(void)
 {
+	setsignal(SIGCHLD);
 	setsignal(SIGINT);
 	setsignal(SIGQUIT);
 }

@@ -1165,11 +1165,34 @@ dowait(int mode, struct job *job)
 	}
 	do {
 #if JOBS
-		if (iflag)
-			wflags = WUNTRACED | WCONTINUED;
+		if (jobctl)
+			/*
+			 * Request stopped-job notifications whenever job
+			 * control is active, even in non-interactive shells.
+			 * dash keys this off jobctl as well.
+			 */
+			wflags = WUNTRACED;
 		else
 #endif
 			wflags = 0;
+		if ((mode & (DOWAIT_BLOCK | DOWAIT_SIG)) == DOWAIT_BLOCK) {
+			gotsigchld = 0;
+			pid = wait3(&status, wflags | WNOHANG,
+			    (struct rusage *)NULL);
+			TRACE(("wait returns %d, status=%d\n", (int)pid, status));
+			if (pid != 0)
+				break;
+			sigfillset(&mask);
+			sigprocmask(SIG_BLOCK, &mask, &omask);
+			while (!gotsigchld && !int_pending())
+				sigsuspend(&omask);
+			sigprocmask(SIG_SETMASK, &omask, NULL);
+			if (int_pending()) {
+				pid = -1;
+				errno = EINTR;
+			}
+			continue;
+		}
 		if ((mode & (DOWAIT_BLOCK | DOWAIT_SIG)) != DOWAIT_BLOCK)
 			wflags |= WNOHANG;
 		pid = wait3(&status, wflags, (struct rusage *)NULL);
