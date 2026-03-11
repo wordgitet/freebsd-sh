@@ -1,0 +1,11 @@
+.POSIX:
+
+TESTEE ?= ../../build/src/sh
+TIMEOUT ?= 60s
+TEST_DIRS = builtins errors execution expansion invocation parameters parser set-e
+TESTS ?=
+
+.PHONY: test-posix-freebsd
+
+test-posix-freebsd:
+	@./run-freebsd-suite.sh "$(TESTEE)" "$(TIMEOUT)" $(TESTS)
