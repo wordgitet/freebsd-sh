@@ -38,6 +38,7 @@ extern volatile sig_atomic_t gotsigchld;
 
 void clear_traps(void);
 int have_traps(void);
+int issigtrapped(int);
 void setsignal(int);
 void ignoresig(int);
 int issigchldtrapped(void);

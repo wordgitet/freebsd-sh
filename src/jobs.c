@@ -958,7 +958,7 @@ forkshell(struct job *jp, union node *n, int mode)
 			if (p->used)
 				freejob(p);
 		INTON;
-		if (wasroot && iflag) {
+		if (wasroot && iflag && mode != FORK_BG) {
 			setsignal(SIGINT);
 			setsignal(SIGQUIT);
 			setsignal(SIGTERM);
@@ -1106,7 +1106,7 @@ waitforjob(struct job *jp, int *signaled)
 		freejob(jp);
 	if (!int_pending()) {
 #if JOBS
-		if (rootshell && propagate_int &&
+		if (rootshell && propagate_int && !issigtrapped(SIGINT) &&
 			WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
 			kill(getpid(), SIGINT);
 #endif

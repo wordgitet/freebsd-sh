@@ -70,6 +70,7 @@
 
 static char sigmode[NSIG];	/* current value of signal */
 static int trap_force_signo;	/* trap is explicitly changing this signal */
+static int trap_default_signo;	/* trap is explicitly restoring true default */
 volatile sig_atomic_t pendingsig;	/* indicates some signal received */
 volatile sig_atomic_t pendingsig_waitcmd;	/* indicates wait builtin should be interrupted */
 volatile sig_atomic_t gotsigchld;	/* indicates a child status change was delivered */
@@ -149,6 +150,32 @@ printsignals(void)
 /*
  * The trap builtin.
  */
+static void
+printtrap(int signo, int show_default)
+{
+	const char *sign;
+
+	if (!show_default && trap[signo] == NULL)
+		return;
+
+	sign = signum_to_signame(signo);
+	out1str("trap -- ");
+	if (trap[signo] == NULL) {
+		if (show_default)
+			out1fmt("%d ", signo);
+		else
+			out1str("- ");
+	} else
+		out1qstr(trap[signo]);
+	if (signo == 0) {
+		out1str(" EXIT\n");
+	} else if (sign) {
+		out1fmt(" %s\n", sign);
+	} else {
+		out1fmt(" %d\n", signo);
+	}
+}
+
 int
 trapcmd(int argc __unused, char **argv)
 {
@@ -156,30 +183,43 @@ trapcmd(int argc __unused, char **argv)
 	int signo;
 	int errors = 0;
 	int i;
+	int print_only = 0;
+	int show_default = 0;
+	int force_default = 0;
 
-	while ((i = nextopt("l")) != '\0') {
+	while ((i = nextopt("lp")) != '\0') {
 		switch (i) {
 		case 'l':
 			printsignals();
 			return (0);
+		case 'p':
+			print_only = 1;
+			show_default = 1;
+			break;
 		}
 	}
 	argv = argptr;
 
+	if (print_only) {
+		if (*argv == NULL) {
+			for (signo = 0 ; signo < NSIG ; signo++)
+				printtrap(signo, show_default);
+			return 0;
+		}
+		for (; *argv; argv++) {
+			if ((signo = sigstring_to_signum(*argv)) == -1) {
+				warning("bad signal %s", *argv);
+				errors = 1;
+				continue;
+			}
+			printtrap(signo, show_default);
+		}
+		return errors;
+	}
+
 	if (*argv == NULL) {
 		for (signo = 0 ; signo < NSIG ; signo++) {
-			if (signo < NSIG && trap[signo] != NULL) {
-				const char *sign = signum_to_signame(signo);
-				out1str("trap -- ");
-				out1qstr(trap[signo]);
-				if (signo == 0) {
-					out1str(" EXIT\n");
-				} else if (sign) {
-					out1fmt(" %s\n", sign);
-				} else {
-					out1fmt(" %d\n", signo);
-				}
-			}
+			printtrap(signo, 0);
 		}
 		return 0;
 	}
@@ -191,6 +231,8 @@ trapcmd(int argc __unused, char **argv)
 			action = *argv;
 			argv++;
 		}
+	} else if (*argv) {
+		force_default = 1;
 	}
 	for (; *argv; argv++) {
 		if ((signo = sigstring_to_signum(*argv)) == -1) {
@@ -206,7 +248,10 @@ trapcmd(int argc __unused, char **argv)
 		trap[signo] = action;
 		if (signo != 0) {
 			trap_force_signo = signo;
+			if (force_default)
+				trap_default_signo = signo;
 			setsignal(signo);
+			trap_default_signo = 0;
 			trap_force_signo = 0;
 		}
 		INTON;
@@ -270,29 +315,31 @@ setsignal(int signo)
 	else
 		action = S_IGN;
 	if (action == S_DFL) {
-		switch (signo) {
-		case SIGINT:
-			action = S_CATCH;
-			break;
-		case SIGQUIT:
+		if (trap_default_signo != signo) {
+			switch (signo) {
+			case SIGINT:
+				action = S_CATCH;
+				break;
+			case SIGQUIT:
 #ifdef DEBUG
-			if (debug)
+				if (debug)
+					break;
+#endif
+				if (rootshell)
+					action = S_IGN;
+				break;
+			case SIGTERM:
+				if (rootshell)
+					action = S_IGN;
+				break;
+#if JOBS
+			case SIGTSTP:
+			case SIGTTOU:
+				if (rootshell && mflag)
+					action = S_IGN;
 				break;
 #endif
-			if (rootshell && iflag)
-				action = S_IGN;
-			break;
-		case SIGTERM:
-			if (rootshell && iflag)
-				action = S_IGN;
-			break;
-#if JOBS
-		case SIGTSTP:
-		case SIGTTOU:
-			if (rootshell && mflag)
-				action = S_IGN;
-			break;
-#endif
+			}
 		}
 	}
 	if (signo == SIGCHLD)
@@ -321,6 +368,8 @@ setsignal(int signo)
 			*t = S_RESET;	/* force to be set */
 		}
 	}
+	if (trap_default_signo == signo && (*t == S_HARD_IGN || *t == S_IGN))
+		*t = S_RESET;
 	if (*t == S_HARD_IGN && trap_force_signo == signo && iflag)
 		*t = S_RESET;
 	if (*t == S_HARD_IGN || *t == action)
@@ -370,10 +419,18 @@ ignoresig(int signo)
 
 
 int
+issigtrapped(int signo)
+{
+
+	return (trap[signo] != NULL && *trap[signo] != '\0');
+}
+
+
+int
 issigchldtrapped(void)
 {
 
-	return (trap[SIGCHLD] != NULL && *trap[SIGCHLD] != '\0');
+	return issigtrapped(SIGCHLD);
 }
 
 
@@ -539,6 +596,8 @@ exitshell_savedstatus(void)
 			FORCEINTON;
 			evalstring(p, 0);
 		}
+	} else if (exception != EXEXIT) {
+		exiting_exitstatus = exitstatus;
 	}
 	if (!setjmp(loc2.loc)) {
 		handler = &loc2;		/* probably unnecessary */

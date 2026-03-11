@@ -103,8 +103,17 @@ static void popstring(void);
 void
 resetinput(void)
 {
+	int c;
+
 	popallfiles();
-	parselleft = parsenleft = 0;	/* clear input buffer */
+	while (parsefile->strpush)
+		popstring();
+
+	c = PEOF;
+	if (parsefile->buf != NULL && parsenextc > parsefile->buf)
+		c = parsenextc[-1];
+	while (c != '\n' && c != PEOF && !int_pending())
+		c = pgetc();
 }
 
 void
