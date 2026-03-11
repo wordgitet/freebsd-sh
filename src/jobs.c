@@ -958,9 +958,13 @@ forkshell(struct job *jp, union node *n, int mode)
 			if (p->used)
 				freejob(p);
 		INTON;
-		if (wasroot && iflag && mode != FORK_BG) {
-			setsignal(SIGINT);
-			setsignal(SIGQUIT);
+		if (wasroot && iflag) {
+			if (mode != FORK_BG) {
+				setsignal(SIGINT);
+				setsignal(SIGQUIT);
+			} else if (mflag) {
+				setsignal(SIGQUIT);
+			}
 			setsignal(SIGTERM);
 		}
 		return pid;

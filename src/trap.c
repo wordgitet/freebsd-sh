@@ -325,11 +325,11 @@ setsignal(int signo)
 				if (debug)
 					break;
 #endif
-				if (rootshell)
+				if (rootshell && iflag)
 					action = S_IGN;
 				break;
 			case SIGTERM:
-				if (rootshell)
+				if (rootshell && iflag)
 					action = S_IGN;
 				break;
 #if JOBS
@@ -552,6 +552,8 @@ trap_init(void)
 void
 setinteractive(void)
 {
+	if (rootshell)
+		setsignal(SIGQUIT);
 	setsignal(SIGTERM);
 }
 
