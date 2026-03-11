@@ -834,6 +834,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	char *lastarg;
 	int signaled;
 	int do_clearcmdentry;
+	int had_cmdsub;
 	const char *path = pathval();
 	int i;
 
@@ -844,6 +845,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	varflag = 1;
 	jp = NULL;
 	do_clearcmdentry = 0;
+	had_cmdsub = 0;
 	oexitstatus = exitstatus;
 	exitstatus = 0;
 	/* Add one slot at the beginning for tryexec(). */
@@ -852,13 +854,25 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		if (varflag && isassignment(argp->narg.text)) {
 			expandarg(argp, varflag == 1 ? &varlist : &arglist,
 			    EXP_VARTILDE);
+			if (argp->narg.backquote != NULL) {
+				had_cmdsub = 1;
+				if (pendingsig)
+					dotrap();
+			}
 			continue;
 		} else if (varflag == 1)
 			varflag = isdeclarationcmd(&argp->narg) ? 2 : 0;
 		expandarg(argp, &arglist, EXP_FULL | EXP_TILDE);
+		if (argp->narg.backquote != NULL) {
+			had_cmdsub = 1;
+			if (pendingsig)
+				dotrap();
+		}
 	}
 	appendarglist(&arglist, nullstr);
 	expredir(cmd->ncmd.redirect);
+	if (had_cmdsub && pendingsig)
+		dotrap();
 	argc = arglist.count - 2;
 	argv = &arglist.args[1];
 
