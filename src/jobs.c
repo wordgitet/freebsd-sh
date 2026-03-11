@@ -245,6 +245,8 @@ fgcmd(int argc __unused, char **argv __unused)
 	int status;
 
 	nextopt("");
+	if (!mflag)
+		error("job control disabled");
 	jp = getjob(*argptr);
 	if (jp->jobctl == 0)
 		error("job not created under job control");
@@ -268,6 +270,8 @@ bgcmd(int argc __unused, char **argv __unused)
 	struct job *jp;
 
 	nextopt("");
+	if (!mflag)
+		error("job control disabled");
 	do {
 		jp = getjob(*argptr);
 		if (jp->jobctl == 0)
@@ -276,6 +280,8 @@ bgcmd(int argc __unused, char **argv __unused)
 			continue;
 		restartjob(jp);
 		jp->foreground = 0;
+		backgndpid = jp->ps[jp->nprocs - 1].pid;
+		bgjob = jp;
 		out1fmt("[%td] ", jp - jobtab + 1);
 		printjobcmd(jp);
 	} while (*argptr != NULL && *++argptr != NULL);
@@ -1290,7 +1296,9 @@ dowait(int mode, struct job *job)
 		}
 	} else {
 		TRACE(("Not printing status, rootshell=%d, job=%p\n", rootshell, job));
-		thisjob->changed = 1;
+		if (!(thisjob == job && thisjob->foreground &&
+		    thisjob->state == JOBSTOPPED))
+			thisjob->changed = 1;
 	}
 	return pid;
 }
