@@ -2,6 +2,20 @@ freebsd-sh
 
 Standalone Meson-based extraction of the FreeBSD sh shell from chimerautils.
 
+Policy:
+
+This fork is POSIX-first.
+
+The yash POSIX suite under test-posix/yash is the primary correctness
+gate for the project. The imported FreeBSD sh regression suite under
+test-posix/freebsd is a secondary guardrail used to catch accidental
+breakage while POSIX fixes land.
+
+When POSIX behavior conflicts with historical FreeBSD behavior, POSIX
+wins by default. Yash behavior and the POSIX text are the main
+day-to-day reference points for compliance work. Dash may be useful as
+an extra comparison point, but it is not the primary model.
+
 Build:
 
 meson setup build
@@ -15,6 +29,25 @@ meson compile -C build-noedit
 Run:
 
 ./build/src/sh -c 'echo ok'
+
+Test:
+
+Primary POSIX scoreboard:
+
+make TESTEE=./build/src/sh test-posix-report
+
+Faster non-signal POSIX pass:
+
+make TESTEE=./build/src/sh test-posix-nosignal-report
+
+Secondary FreeBSD guardrail:
+
+make TESTEE=./build/src/sh test-posix-freebsd
+
+Convenience aliases:
+
+make TESTEE=./build/src/sh test-primary
+make TESTEE=./build/src/sh test-guardrail
 
 Layout:
 

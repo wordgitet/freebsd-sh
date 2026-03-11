@@ -106,3 +106,36 @@ Rules:
 ### Preference
 
 If a commit is not a merge commit, use the normal commit format above.
+
+## Compliance strategy
+
+This project is POSIX-first.
+
+- The imported yash POSIX suite is the primary release-blocking
+  correctness gate.
+- The imported FreeBSD sh regression suite is a secondary guardrail
+  used to catch accidental breakage while POSIX fixes land.
+- When POSIX behavior conflicts with legacy FreeBSD behavior, POSIX
+  wins by default.
+- Use yash behavior and the POSIX text as the main semantic reference.
+  Dash may be used as a secondary datapoint, but not as the primary
+  model.
+
+### Performance guardrails
+
+- Preserve the current fast non-interactive execution paths unless a
+  failing POSIX test proves a hot-path change is necessary.
+- Prefer fixes that are conditional on interactive mode, job control,
+  trap handling, or special builtin/error paths.
+- Tiny regressions only are acceptable on hot paths. Redesign fixes
+  that noticeably slow loops, simple commands, or process launch.
+
+### Test workflow
+
+- Use `make TESTEE=./build/src/sh test-posix-report` as the main
+  correctness scoreboard.
+- Use `make TESTEE=./build/src/sh test-posix-nosignal-report` for
+  faster iteration when working outside signals and job control.
+- Use `make TESTEE=./build/src/sh test-posix-freebsd` as a secondary
+  regression pass after changes in `cd`, `wait`, parser/error
+  behavior, or traps/job control.
