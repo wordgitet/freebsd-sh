@@ -69,6 +69,7 @@
 
 
 static char sigmode[NSIG];	/* current value of signal */
+static int trap_force_signo;	/* trap is explicitly changing this signal */
 volatile sig_atomic_t pendingsig;	/* indicates some signal received */
 volatile sig_atomic_t pendingsig_waitcmd;	/* indicates wait builtin should be interrupted */
 volatile sig_atomic_t gotsigchld;	/* indicates a child status change was delivered */
@@ -203,8 +204,11 @@ trapcmd(int argc __unused, char **argv)
 		if (trap[signo])
 			ckfree(trap[signo]);
 		trap[signo] = action;
-		if (signo != 0)
+		if (signo != 0) {
+			trap_force_signo = signo;
 			setsignal(signo);
+			trap_force_signo = 0;
+		}
 		INTON;
 	}
 	return errors;
@@ -317,6 +321,8 @@ setsignal(int signo)
 			*t = S_RESET;	/* force to be set */
 		}
 	}
+	if (*t == S_HARD_IGN && trap_force_signo == signo && iflag)
+		*t = S_RESET;
 	if (*t == S_HARD_IGN || *t == action)
 		return;
 	switch (action) {

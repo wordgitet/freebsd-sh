@@ -575,13 +575,7 @@ waitcmdloop(struct job *job)
 					retval = WEXITSTATUS(status);
 				else
 					retval = WTERMSIG(status) + 128;
-				if (! iflag || ! job->changed)
-					freejob(job);
-				else {
-					job->remembered = 0;
-					if (job == bgjob)
-						bgjob = NULL;
-				}
+				freejob(job);
 				return retval;
 			}
 		} else {
@@ -589,13 +583,7 @@ waitcmdloop(struct job *job)
 				return 0;
 			for (jp = jobtab ; jp < jobtab + njobs; jp++)
 				if (jp->used && jp->state == JOBDONE) {
-					if (! iflag || ! jp->changed)
-						freejob(jp);
-					else {
-						jp->remembered = 0;
-						if (jp == bgjob)
-							bgjob = NULL;
-					}
+					freejob(jp);
 				}
 			for (jp = jobtab ; ; jp++) {
 				if (jp >= jobtab + njobs) {	/* no running procs */
@@ -1116,15 +1104,13 @@ waitforjob(struct job *jp, int *signaled)
 		st = WTERMSIG(status) + 128;
 	if (! JOBS || jp->state == JOBDONE)
 		freejob(jp);
-	if (int_pending()) {
-		if (!WIFSIGNALED(status) || WTERMSIG(status) != SIGINT)
-			CLEAR_PENDING_INT;
-	}
+	if (!int_pending()) {
 #if JOBS
-	else if (rootshell && propagate_int &&
+		if (rootshell && propagate_int &&
 			WIFSIGNALED(status) && WTERMSIG(status) == SIGINT)
-		kill(getpid(), SIGINT);
+			kill(getpid(), SIGINT);
 #endif
+	}
 	INTON;
 	return st;
 }

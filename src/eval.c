@@ -199,6 +199,9 @@ evaltree(union node *n, int flags)
 #ifndef NO_HISTORY
 		displayhist = 1;	/* show history substitutions done with fc */
 #endif
+		if (pendingsig)
+			dotrap();
+		FORCEINTON;
 		TRACE(("evaltree(%p: %d) called\n", (void *)n, n->type));
 		switch (n->type) {
 		case NSEMI:
