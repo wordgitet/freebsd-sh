@@ -16,6 +16,9 @@
 /test-posix/yash/*.d
 /test-posix/yash/*.dSYM
 /test-posix/yash/summary.log
+/test-posix/yash/report*.csv
+/test-posix/yash/report*.md
+/test-posix/yash/report*.stamp
 /test-posix/yash/checkfg
 /test-posix/yash/ptwrap
 /test-posix/yash/resetsig

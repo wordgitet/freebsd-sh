@@ -22,9 +22,20 @@ RECHECK_LOGS = $(TEST_RESULTS)
 TESTERS = $(SOURCES:.c=)
 RUN_TEST = ./resetsig $(YASH) ./run-test.sh
 SUMMARY = summary.log
-BYPRODUCTS = $(TESTERS) $(TEST_RESULTS) $(SUMMARY) *.out *.err *.valgrind tmp.* *.dSYM
+REPORT_CSV = report.csv
+REPORT_MD = report.md
+REPORT_STAMP = $(REPORT_CSV:.csv=.stamp)
+POSIX_REPORT_CSV = report-posix.csv
+POSIX_REPORT_MD = report-posix.md
+POSIX_NOSIGNAL_REPORT_CSV = report-posix-nosignal.csv
+POSIX_NOSIGNAL_REPORT_MD = report-posix-nosignal.md
+BYPRODUCTS = $(TESTERS) $(TEST_RESULTS) $(SUMMARY) $(REPORT_CSV) $(REPORT_MD) \
+	$(POSIX_REPORT_CSV) $(POSIX_REPORT_MD) \
+	$(POSIX_NOSIGNAL_REPORT_CSV) $(POSIX_NOSIGNAL_REPORT_MD) \
+	report*.stamp *.out *.err *.valgrind tmp.* *.dSYM
 
-.PHONY: all test test-posix test-posix-nosignal clean clean-results check-yash check-testee tester
+.PHONY: all test test-posix test-posix-nosignal test-report test-posix-report \
+	test-posix-nosignal-report clean clean-results check-yash check-testee tester
 
 all: test-posix
 
@@ -57,8 +68,31 @@ test-posix:
 test-posix-nosignal:
 	@$(MAKE) TEST_SOURCES='$(if $(TESTS),$(TESTS),$(POSIX_NOSIGNAL_TEST_SOURCES))' test
 
+test-report: check-yash check-testee
+	rm -rf $(RECHECK_LOGS)
+	@$(MAKE) $(SUMMARY) $(REPORT_CSV) $(REPORT_MD)
+	@cat $(REPORT_MD)
+	@awk -F, 'NR > 1 && $$3 != 0 { bad = 1 } END { exit bad }' $(REPORT_CSV)
+
+test-posix-report:
+	@$(MAKE) TEST_SOURCES='$(if $(TESTS),$(TESTS),$(POSIX_TEST_SOURCES))' \
+		REPORT_CSV='$(POSIX_REPORT_CSV)' REPORT_MD='$(POSIX_REPORT_MD)' \
+		test-report
+
+test-posix-nosignal-report:
+	@$(MAKE) TEST_SOURCES='$(if $(TESTS),$(TESTS),$(POSIX_NOSIGNAL_TEST_SOURCES))' \
+		REPORT_CSV='$(POSIX_NOSIGNAL_REPORT_CSV)' \
+		REPORT_MD='$(POSIX_NOSIGNAL_REPORT_MD)' \
+		test-report
+
 $(SUMMARY): $(TEST_RESULTS)
 	./summarize.sh $(TEST_RESULTS) >| $@
+
+$(REPORT_STAMP): $(TEST_RESULTS) report.sh
+	./report.sh $(REPORT_CSV) $(REPORT_MD) $(TEST_RESULTS)
+	: >| $@
+
+$(REPORT_CSV) $(REPORT_MD): $(REPORT_STAMP)
 
 $(TEST_RESULTS): $(TESTERS)
 
@@ -82,7 +116,11 @@ $(TESTERS):
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $@.c $(LDLIBS)
 
 clean-results:
-	rm -f $(TEST_RESULTS) $(SUMMARY) *.out *.err *.valgrind tmp.*
+	rm -f $(TEST_RESULTS) $(SUMMARY) $(REPORT_CSV) $(REPORT_MD) \
+		$(POSIX_REPORT_CSV) $(POSIX_REPORT_MD) \
+		$(POSIX_NOSIGNAL_REPORT_CSV) $(POSIX_NOSIGNAL_REPORT_MD) \
+		report*.stamp \
+		*.out *.err *.valgrind tmp.*
 
 clean: clean-results
 	rm -f $(TESTERS)
