@@ -1176,14 +1176,16 @@ dowait(int mode, struct job *job)
 #endif
 			wflags = 0;
 		if ((mode & (DOWAIT_BLOCK | DOWAIT_SIG)) == DOWAIT_BLOCK) {
+			sigfillset(&mask);
+			sigprocmask(SIG_BLOCK, &mask, &omask);
 			gotsigchld = 0;
 			pid = wait3(&status, wflags | WNOHANG,
 			    (struct rusage *)NULL);
 			TRACE(("wait returns %d, status=%d\n", (int)pid, status));
-			if (pid != 0)
+			if (pid != 0) {
+				sigprocmask(SIG_SETMASK, &omask, NULL);
 				break;
-			sigfillset(&mask);
-			sigprocmask(SIG_BLOCK, &mask, &omask);
+			}
 			while (!gotsigchld && !int_pending())
 				sigsuspend(&omask);
 			sigprocmask(SIG_SETMASK, &omask, NULL);
