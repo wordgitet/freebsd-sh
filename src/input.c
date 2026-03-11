@@ -107,6 +107,25 @@ resetinput(void)
 	parselleft = parsenleft = 0;	/* clear input buffer */
 }
 
+void
+flushinput(void)
+{
+	int left;
+
+	if (parsefile != &basepf || parsefile->fd != 0)
+		return;
+
+	left = parsenleft + parselleft;
+	if (left <= 0)
+		return;
+
+	if (lseek(0, -(off_t)left, SEEK_CUR) < 0)
+		return;
+
+	parsenextc = parsefile->buf;
+	parselleft = parsenleft = 0;
+}
+
 
 
 /*

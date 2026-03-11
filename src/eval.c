@@ -42,6 +42,7 @@
  */
 
 #include "shell.h"
+#include "main.h"
 #include "nodes.h"
 #include "syntax.h"
 #include "expand.h"
@@ -423,7 +424,7 @@ evalsubshell(union node *n, int flags)
 
 	oexitstatus = exitstatus;
 	expredir(n->nredir.redirect);
-	if ((!backgnd && flags & EV_EXIT && !have_traps()) ||
+	if ((!backgnd && !rootshell && flags & EV_EXIT && !have_traps()) ||
 			forkshell(jp = makejob(n, 1), n, backgnd) == 0) {
 		if (backgnd)
 			flags &=~ EV_TESTED;

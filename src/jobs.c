@@ -899,6 +899,8 @@ forkshell(struct job *jp, union node *n, int mode)
 	INTOFF;
 	if (mode == FORK_BG && (jp == NULL || jp->nprocs == 0))
 		checkzombies();
+	if (mode == FORK_BG && rootshell && mflag)
+		flushinput();
 	flushall();
 	pid = fork();
 	if (pid == -1) {
