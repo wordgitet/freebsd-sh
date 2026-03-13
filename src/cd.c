@@ -73,6 +73,7 @@ cdcmd(int argc __unused, char **argv __unused)
 {
 	const char *dest;
 	const char *path;
+	const char *path_orig;
 	char *p;
 	struct stat statb;
 	int ch, phys, print = 0, getcwderr = 0;
@@ -110,6 +111,7 @@ cdcmd(int argc __unused, char **argv __unused)
 	    (dest[0] == '.' && dest[1] == '.' && (dest[2] == '/' || dest[2] == '\0')) ||
 	    (path = bltinlookup("CDPATH", 1)) == NULL)
 		path = "";
+	path_orig = path;
 	while ((p = padvance(&path, NULL, dest)) != NULL) {
 		if (stat(p, &statb) < 0) {
 			if (errno != ENOENT)
@@ -117,21 +119,21 @@ cdcmd(int argc __unused, char **argv __unused)
 		} else if (!S_ISDIR(statb.st_mode))
 			errno1 = ENOTDIR;
 		else {
-			if (!print) {
-				/*
-				 * XXX - rethink
-				 */
-				if (p[0] == '.' && p[1] == '/' && p[2] != '\0')
-					print = strcmp(p + 2, dest);
-				else
-					print = strcmp(p, dest);
-			}
+			if (!print)
+				print = strcmp(p, dest);
 			rc = docd(p, print, phys);
 			if (rc >= 0)
 				return getcwderr ? rc : 0;
 			if (errno != ENOENT)
 				errno1 = errno;
 		}
+	}
+	if (*path_orig != '\0') {
+		rc = docd(stsavestr(dest), 0, phys);
+		if (rc >= 0)
+			return getcwderr ? rc : 0;
+		if (errno != ENOENT)
+			errno1 = errno;
 	}
 	error("%s: %s", dest, strerror(errno1));
 	/*NOTREACHED*/
@@ -154,7 +156,7 @@ docd(char *dest, int print, int phys)
 	if ((phys || (rc = cdlogical(dest)) < 0) && (rc = cdphysical(dest)) < 0)
 		return (-1);
 
-	if (print && iflag && curdir) {
+	if (print && curdir) {
 		out1fmt("%s\n", curdir);
 		/*
 		 * Ignore write errors to preserve the invariant that the
@@ -209,9 +211,11 @@ cdlogical(char *dest)
 			break;
 		}
 	}
+	if (badstat)
+		return (-1);
 
 	INTOFF;
-	if ((p = findcwd(badstat ? NULL : dest)) == NULL || chdir(p) < 0) {
+	if ((p = findcwd(dest)) == NULL || chdir(p) < 0) {
 		INTON;
 		return (-1);
 	}
