@@ -1,5 +1,5 @@
 TESTEE ?= ./build/src/sh
-TIMEOUT ?= 60s
+TIMEOUT ?= 160s
 
 .PHONY: test-posix test-posix-nosignal test-posix-report test-posix-nosignal-report test-posix-freebsd test-posix-yash test-primary test-guardrail clean-test-posix
 

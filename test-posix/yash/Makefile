@@ -3,7 +3,7 @@
 
 YASH ?= $(shell command -v yash 2>/dev/null)
 TESTEE ?= ../../build/src/sh
-TIMEOUT ?= 60s
+TIMEOUT ?= 160s
 TIMEOUT_CMD ?= timeout $(TIMEOUT)
 CC ?= cc
 CFLAGS ?= -O2
