@@ -1143,7 +1143,7 @@ parseredir(char *out, int c)
 
 static char *
 parsebackq(char *out, struct nodelist **pbqlist,
-		int oldstyle, int dblquote, int quoted)
+		int oldstyle, int dblquote __unused, int quoted)
 {
 	struct nodelist **nlpp;
 	union node *n;
@@ -1207,9 +1207,9 @@ parsebackq(char *out, struct nodelist **pbqlist,
 			switch (c) {
 			case '\\':
 				c = pgetc();
-                                if (c != '\\' && c != '`' && c != '$'
-                                    && (!dblquote || c != '"'))
-                                        USTPUTC('\\', oout);
+				if (c != '\\' && c != '`' && c != '$' &&
+				    (!quoted || c != '"'))
+					USTPUTC('\\', oout);
 				break;
 
 			case '\n':
