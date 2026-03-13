@@ -55,6 +55,7 @@
 #include "show.h"
 #include "eval.h"
 #include "exec.h"	/* to check for special builtins */
+#include "jobs.h"
 #ifndef NO_HISTORY
 #include "myhistedit.h"
 #endif
@@ -102,6 +103,8 @@ static int quoteflag;		/* set if (part of) last token was quoted */
 static int startlinno;		/* line # where last token started */
 static int funclinno;		/* line # where the current function started */
 static struct parser_temp *parser_temp;
+static const char *const *checkkwd_override;
+static int suppressalias;
 
 #define NOEOFMARK ((const char *)&heredoclist)
 
@@ -126,6 +129,8 @@ static void synerror(const char *) __dead2;
 static void setprompt(int);
 static int pgetc_linecont(void);
 static void getusername(char *, size_t);
+static int isoverriddenkwd(const char *);
+static int isblankaliasval(const char *);
 
 
 static void *
@@ -194,6 +199,26 @@ parser_temp_free_all(void)
 	INTON;
 }
 
+static int
+isoverriddenkwd(const char *word)
+{
+	const char *const *pp;
+
+	for (pp = checkkwd_override; pp != NULL && *pp != NULL; pp++) {
+		if (equal(*pp, word))
+			return 1;
+	}
+	return 0;
+}
+
+static int
+isblankaliasval(const char *val)
+{
+	while (*val == ' ' || *val == '\t')
+		val++;
+	return *val == '\0';
+}
+
 
 /*
  * Read and parse a command.  Returns NEOF on end of file.  (NULL is a
@@ -223,6 +248,8 @@ parsecmd(int interact)
 	if (t == TEOF)
 		return NEOF;
 	if (t == TNL)
+		return NULL;
+	if (t == TBLANK)
 		return NULL;
 	tokpushback++;
 	return list(1);
@@ -468,20 +495,27 @@ command(void)
 		checkkwd = CHKKWD | CHKALIAS;
 		break;
 	case TFOR:
+		static const char *const for_in_kwd[] = { "in", "do", NULL };
+		static const char *const for_body_kwd[] = { "do", "{", NULL };
 		if (readtoken() != TWORD || quoteflag || ! goodname(wordtext))
 			synerror("Bad for loop variable");
 		n1 = (union node *)stalloc(sizeof (struct nfor));
 		n1->type = NFOR;
 		n1->nfor.var = wordtext;
-		checkkwd = CHKNL;
-		if (readtoken() == TWORD && !quoteflag &&
+		checkkwd = CHKNL | CHKALIAS;
+		checkkwd_override = for_in_kwd;
+		t = readtoken();
+		checkkwd_override = NULL;
+		if (t == TWORD && !quoteflag &&
 		    equal(wordtext, "in")) {
 			app = &ap;
+			suppressalias++;
 			while (readtoken() == TWORD) {
 				n2 = makename();
 				*app = n2;
 				app = &n2->narg.next;
 			}
+			suppressalias--;
 			*app = NULL;
 			n1->nfor.args = ap;
 			if (lasttoken == TNL)
@@ -505,8 +539,17 @@ command(void)
 			if (lasttoken != TSEMI)
 				tokpushback++;
 		}
-		checkkwd = CHKNL | CHKKWD | CHKALIAS;
-		if ((t = readtoken()) == TDO)
+		checkkwd = CHKNL | CHKALIAS;
+		checkkwd_override = for_body_kwd;
+		t = readtoken();
+		checkkwd_override = NULL;
+		if (t == TWORD && !quoteflag) {
+			if (equal(wordtext, "do"))
+				t = TDO;
+			else if (equal(wordtext, "{"))
+				t = TBEGIN;
+		}
+		if (t == TDO)
 			t = TDONE;
 		else if (t == TBEGIN)
 			t = TEND;
@@ -517,12 +560,17 @@ command(void)
 		checkkwd = CHKKWD | CHKALIAS;
 		break;
 	case TCASE:
+		static const char *const case_in_kwd[] = { "in", NULL };
+
 		n1 = (union node *)stalloc(sizeof (struct ncase));
 		n1->type = NCASE;
 		consumetoken(TWORD);
 		n1->ncase.expr = makename();
-		checkkwd = CHKNL;
-		if (readtoken() != TWORD || ! equal(wordtext, "in"))
+		checkkwd = CHKNL | CHKALIAS;
+		checkkwd_override = case_in_kwd;
+		t = readtoken();
+		checkkwd_override = NULL;
+		if (t != TWORD || ! equal(wordtext, "in"))
 			synerror("expecting \"in\"");
 		cpp = &n1->ncase.cases;
 		checkkwd = CHKNL | CHKKWD, readtoken();
@@ -590,6 +638,10 @@ command(void)
 		tokpushback++;
 		n1 = simplecmd(rpp, redir);
 		return n1;
+	case TBLANK:
+		if (redir)
+			synexpect(-1);
+		return NULL;
 	case TWORD:
 		tokpushback++;
 		n1 = simplecmd(rpp, redir);
@@ -723,7 +775,8 @@ makebinary(int type, union node *n1, union node *n2)
 void
 forcealias(void)
 {
-	checkkwd |= CHKALIAS;
+	if (!suppressalias)
+		checkkwd |= CHKALIAS;
 }
 
 void
@@ -822,6 +875,7 @@ readtoken(void)
 {
 	int t;
 	struct alias *ap;
+	int blankalias = 0;
 #ifdef DEBUG
 	int alreadyseen = tokpushback;
 #endif
@@ -846,6 +900,9 @@ readtoken(void)
 	{
 		const char * const *pp;
 
+		if (isoverriddenkwd(wordtext))
+			goto out;
+
 		if (checkkwd & CHKKWD)
 			for (pp = parsekwd; *pp; pp++) {
 				if (**pp == *wordtext && equal(*pp, wordtext))
@@ -855,12 +912,15 @@ readtoken(void)
 					goto out;
 				}
 			}
-		if (checkkwd & CHKALIAS &&
+		if (!suppressalias && (checkkwd & CHKALIAS) &&
 		    (ap = lookupalias(wordtext, 1)) != NULL) {
+			blankalias = isblankaliasval(ap->val);
 			pushstring(ap->val, strlen(ap->val), ap);
 			goto top;
 		}
 	}
+	if (blankalias && (t == TNL || t == TEOF))
+		lasttoken = t = TBLANK;
 out:
 	if (t != TNOT)
 		checkkwd = 0;
@@ -970,6 +1030,7 @@ struct tokenstate
 {
 	const char *syntax; /* *SYNTAX */
 	int parenlevel; /* levels of parentheses in arithmetic */
+	int oldvar_dq;
 	enum tokenstate_category
 	{
 		TSTATE_TOP,
@@ -1092,13 +1153,17 @@ parsebackq(char *out, struct nodelist **pbqlist,
 	size_t savelen;
 	const int bq_startlinno = plinno;
 	char *volatile ostr = NULL;
+	int suppress_bq_alias;
 	struct parsefile *const savetopfile = getcurrentfile();
 	struct heredoc *const saveheredoclist = heredoclist;
 	struct heredoc *here;
 
 	str = NULL;
+	suppress_bq_alias = 0;
 	if (setjmp(jmploc.loc)) {
 		popfilesupto(savetopfile);
+		if (suppress_bq_alias)
+			suppressalias--;
 		if (str)
 			ckfree(str);
 		if (ostr)
@@ -1184,8 +1249,29 @@ parsebackq(char *out, struct nodelist **pbqlist,
 			synexpect(-1);
 		doprompt = saveprompt;
 	} else {
+		char *cmdtext;
+		union node *wrapper;
+
+		if (funclinno != 0) {
+			suppressalias++;
+			suppress_bq_alias = 1;
+		}
 		n = list(0);
 		consumetoken(TRP);
+		if (suppress_bq_alias) {
+			suppressalias--;
+			suppress_bq_alias = 0;
+			INTOFF;
+			cmdtext = commandtext(n);
+			wrapper = (union node *)stalloc(sizeof(struct narg));
+			wrapper->type = NARG;
+			wrapper->narg.next = NULL;
+			wrapper->narg.backquote = NULL;
+			wrapper->narg.text = stsavestr(cmdtext);
+			ckfree(cmdtext);
+			INTON;
+			n = wrapper;
+		}
 	}
 
 	(*nlpp)->n = n;
@@ -1419,6 +1505,7 @@ readtoken1(int firstc, char const *initialsyntax, const char *eofmark,
 	level = 0;
 	state[level].syntax = initialsyntax;
 	state[level].parenlevel = 0;
+	state[level].oldvar_dq = 0;
 	state[level].category = TSTATE_TOP;
 
 	STARTSTACKSTR(out);
@@ -1430,6 +1517,9 @@ readtoken1(int firstc, char const *initialsyntax, const char *eofmark,
 			CHECKSTRSPACE(4, out);	/* permit 4 calls to USTPUTC */
 
 			synentry = state[level].syntax[c];
+			if (state[level].category == TSTATE_VAR_OLD &&
+			    state[level].oldvar_dq && c == '\'')
+				synentry = CWORD;
 
 			switch(synentry) {
 			case CNL:	/* '\n' */
@@ -1591,8 +1681,10 @@ endword:
 	if (eofmark == NULL) {
 		if ((c == '>' || c == '<')
 		 && quotef == 0
-		 && len <= 2
-		 && (*out == '\0' || is_digit(*out))) {
+		 && ((len <= 2 && (*out == '\0' || is_digit(*out))) ||
+		     (len == 1 && out[0] == '<' && c == '>'))) {
+			if (len == 1 && out[0] == '<')
+				*out = '\0';
 			parseredir(out, c);
 			return lasttoken = TREDIR;
 		} else {
@@ -1764,6 +1856,7 @@ varname:
 			}
 			level++;
 			state[level].parenlevel = 0;
+			state[level].oldvar_dq = 0;
 			if (subtype == VSMINUS || subtype == VSPLUS ||
 			    subtype == VSQUESTION || subtype == VSASSIGN) {
 				/*
@@ -1771,6 +1864,8 @@ varname:
 				 * inherit the double-quote state.
 				 */
 				state[level].syntax = state[level - 1].syntax;
+				state[level].oldvar_dq =
+				    state[level - 1].syntax == DQSYNTAX;
 				state[level].category = TSTATE_VAR_OLD;
 			} else {
 				/*

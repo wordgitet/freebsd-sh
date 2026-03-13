@@ -160,6 +160,26 @@ stputs_quotes(const char *data, const char *syntax, char *p)
 #define STPUTS_QUOTES(data, syntax, p) p = stputs_quotes((data), syntax, p)
 
 static char *
+stputs_pattern(const char *data, char *p)
+{
+	char c;
+
+	while ((c = *data++) != '\0') {
+		CHECKSTRSPACE(3, p);
+		if (c == '\\' && *data != '\0') {
+			USTPUTC(CTLESC, p);
+			USTPUTC(*data++, p);
+			continue;
+		}
+		if (BASESYNTAX[(int)c] == CCTL)
+			USTPUTC(CTLESC, p);
+		USTPUTC(c, p);
+	}
+	return (p);
+}
+#define STPUTS_PATTERN(data, p) p = stputs_pattern((data), p)
+
+static char *
 nextword(char c, int flag, char *p, struct worddest *dst)
 {
 	int is_ws;
@@ -192,10 +212,17 @@ stputs_split(const char *data, const char *syntax, int flag, char *p,
 
 	ifs = ifsset() ? ifsval() : " \t\n";
 	while (*data) {
-		CHECKSTRSPACE(2, p);
+		CHECKSTRSPACE(3, p);
 		c = *data++;
 		if (strchr(ifs, c) != NULL) {
 			NEXTWORD(c, flag, p, dst);
+			continue;
+		}
+		if ((flag & EXP_GLOB) && c == '\\' &&
+		    (*data == '*' || *data == '?' || *data == '[')) {
+			USTPUTC('\\', p);
+			USTPUTC(CTLESC, p);
+			USTPUTC(*data++, p);
 			continue;
 		}
 		if (flag & EXP_GLOB && syntax[(int)c] == CCTL)
@@ -874,8 +901,12 @@ strtodest(const char *p, int flag, int subtype, int quoted,
 		STPUTS(p, expdest);
 	else if (flag & EXP_SPLIT && !quoted && dst != NULL)
 		STPUTS_SPLIT(p, BASESYNTAX, flag, expdest, dst);
-	else if (flag & (EXP_GLOB | EXP_CASE))
-		STPUTS_QUOTES(p, quoted ? DQSYNTAX : BASESYNTAX, expdest);
+	else if (flag & (EXP_GLOB | EXP_CASE)) {
+		if (quoted)
+			STPUTS_QUOTES(p, DQSYNTAX, expdest);
+		else
+			STPUTS_PATTERN(p, expdest);
+	}
 	else
 		STPUTS(p, expdest);
 }
@@ -1036,6 +1067,10 @@ expandmeta(char *pattern, struct arglist *dstlist)
 	firstmatch = dstlist->count;
 	p = pattern;
 	for (; (c = *p) != '\0'; p++) {
+		if (c == CTLESC && p[1] != '\0') {
+			p++;
+			continue;
+		}
 		/* fast check for meta chars */
 		if (c == '*' || c == '?' || c == '[') {
 			INTOFF;

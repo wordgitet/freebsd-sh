@@ -51,6 +51,7 @@ TENDCASE 1	";;"
 TFALLTHRU 1	";&"
 TREDIR	0	redirection
 TWORD	0	word
+TBLANK	0	blank
 TIF	0	"if"
 TTHEN	1	"then"
 TELSE	1	"else"

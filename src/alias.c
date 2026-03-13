@@ -236,7 +236,10 @@ unaliascmd(int argc __unused, char **argv __unused)
 		}
 	}
 	for (i = 0; *argptr; argptr++)
-		i |= unalias(*argptr);
+		if (unalias(*argptr)) {
+			warning("%s: not found", *argptr);
+			i = 1;
+		}
 
 	return (i);
 }

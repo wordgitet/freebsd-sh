@@ -224,8 +224,13 @@ preadbuffer(void)
 		 * alias remains in use while parsing its last word.
 		 * This avoids alias recursions.
 		 */
-		if (parsenleft == -1 && parsefile->strpush->ap != NULL)
-			return ' ';
+		if (parsenleft == -1 && parsefile->strpush->ap != NULL) {
+			const char *val = parsefile->strpush->ap->val;
+			size_t len = strlen(val);
+
+			if (len != 0 && (val[len - 1] == ' ' || val[len - 1] == '\t'))
+				return ' ';
+		}
 		popstring();
 		if (--parsenleft >= 0)
 			return (*parsenextc++);

@@ -644,6 +644,7 @@ evalbackcmd(union node *n, struct backcmd *result)
 	struct jmploc *savehandler;
 	struct localvar *savelocalvars;
 	unsigned char saveoptreset;
+	int deferred;
 
 	result->fd = -1;
 	result->buf = NULL;
@@ -655,7 +656,9 @@ evalbackcmd(union node *n, struct backcmd *result)
 	}
 	setstackmark(&smark);
 	exitstatus = oexitstatus;
-	if (is_valid_fast_cmdsubst(n)) {
+	deferred = n->type == NARG && n->narg.next == NULL &&
+	    n->narg.backquote == NULL;
+	if (!deferred && is_valid_fast_cmdsubst(n)) {
 		savelocalvars = localvars;
 		localvars = NULL;
 		saveoptreset = shellparam.reset;
@@ -692,7 +695,10 @@ evalbackcmd(union node *n, struct backcmd *result)
 				dup2(pip[1], 1);
 				close(pip[1]);
 			}
-			evaltree(n, EV_EXIT);
+			if (deferred)
+				evalstring(n->narg.text, EV_EXIT);
+			else
+				evaltree(n, EV_EXIT);
 		}
 		close(pip[1]);
 		result->fd = pip[0];
