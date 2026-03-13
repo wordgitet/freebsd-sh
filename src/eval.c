@@ -1268,10 +1268,12 @@ breakcmd(int argc, char **argv)
 	long n;
 	char *end;
 
+	if (argc > 1 && strcmp(argv[1], "--") == 0)
+		argc--, argv++;
 	if (argc > 1) {
 		/* Allow arbitrarily large numbers. */
 		n = strtol(argv[1], &end, 10);
-		if (!is_digit(argv[1][0]) || *end != '\0')
+		if (!is_digit(argv[1][0]) || *end != '\0' || n <= 0)
 			error("Illegal number: %s", argv[1]);
 	} else
 		n = 1;
@@ -1338,8 +1340,11 @@ commandcmd(int argc __unused, char **argv __unused)
 int
 returncmd(int argc, char **argv)
 {
-	int ret = argc > 1 ? number(argv[1]) : oexitstatus;
+	int ret;
 
+	if (argc > 1 && strcmp(argv[1], "--") == 0)
+		argc--, argv++;
+	ret = argc > 1 ? number(argv[1]) : oexitstatus;
 	evalskip = SKIPRETURN;
 	skipcount = 1;
 	return ret;

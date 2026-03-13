@@ -335,6 +335,8 @@ exitcmd(int argc, char **argv)
 {
 	if (stoppedjobs())
 		return 0;
+	if (argc > 1 && strcmp(argv[1], "--") == 0)
+		argc--, argv++;
 	if (argc > 1)
 		exitshell(number(argv[1]));
 	else

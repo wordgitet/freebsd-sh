@@ -365,10 +365,12 @@ shiftcmd(int argc, char **argv)
 	int i, n;
 
 	n = 1;
+	if (argc > 1 && strcmp(argv[1], "--") == 0)
+		argc--, argv++;
 	if (argc > 1)
 		n = number(argv[1]);
 	if (n > shellparam.nparam)
-		return 1;
+		error("can't shift that many");
 	INTOFF;
 	shellparam.nparam -= n;
 	if (shellparam.malloc)
