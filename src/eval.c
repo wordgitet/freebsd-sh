@@ -831,6 +831,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	struct localvar *savelocalvars;
 	struct parsefile *savetopfile;
 	volatile int e;
+	volatile int in_redirect;
 	char *lastarg;
 	int signaled;
 	int do_clearcmdentry;
@@ -988,6 +989,9 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			cmdentry.special = 0;
 	}
 
+	if (argc > 0 && !cmdentry.special)
+		listsetvar(&varlist, VNOSET);
+
 	/* Fork off a child process if necessary. */
 	if (((cmdentry.cmdtype == CMDNORMAL || cmdentry.cmdtype == CMDUNKNOWN)
 	    && ((flags & EV_EXIT) == 0 || have_traps()))
@@ -1042,7 +1046,9 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		localvars = NULL;
 		reffunc(cmdentry.u.func);
 		savehandler = handler;
+		in_redirect = 1;
 		if (setjmp(jmploc.loc)) {
+			e = exception;
 			popredir();
 			unreffunc(cmdentry.u.func);
 			poplocalvars();
@@ -1051,11 +1057,18 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			shellparam = saveparam;
 			funcnest--;
 			handler = savehandler;
+			if (e == EXERROR && in_redirect) {
+				FORCEINTON;
+				if (jp)
+					exitshell(exitstatus);
+				return;
+			}
 			longjmp(handler->loc, 1);
 		}
 		handler = &jmploc;
 		funcnest++;
 		redirect(cmd->ncmd.redirect, REDIR_PUSH);
+		in_redirect = 0;
 		INTON;
 		for (i = 0; i < varlist.count; i++)
 			mklocal(varlist.args[i]);
