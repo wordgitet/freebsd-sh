@@ -1341,10 +1341,13 @@ int
 returncmd(int argc, char **argv)
 {
 	int ret;
+	int trapstatus;
 
 	if (argc > 1 && strcmp(argv[1], "--") == 0)
 		argc--, argv++;
-	ret = argc > 1 ? number(argv[1]) : oexitstatus;
+	trapstatus = gettrapstatus();
+	ret = argc > 1 ? number(argv[1]) :
+	    trapstatus >= 0 ? trapstatus : oexitstatus;
 	evalskip = SKIPRETURN;
 	skipcount = 1;
 	return ret;

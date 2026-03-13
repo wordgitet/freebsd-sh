@@ -71,6 +71,8 @@
 static char sigmode[NSIG];	/* current value of signal */
 static int trap_force_signo;	/* trap is explicitly changing this signal */
 static int trap_default_signo;	/* trap is explicitly restoring true default */
+static int trap_saved_status;	/* status before the current trap action */
+static int trap_saved_active;	/* non-zero while running a trap action */
 volatile sig_atomic_t pendingsig;	/* indicates some signal received */
 volatile sig_atomic_t pendingsig_waitcmd;	/* indicates wait builtin should be interrupted */
 volatile sig_atomic_t gotsigchld;	/* indicates a child status change was delivered */
@@ -475,6 +477,7 @@ dotrap(void)
 	struct stackmark smark;
 	int i;
 	int savestatus, prev_evalskip, prev_skipcount;
+	int prev_trap_saved_status, prev_trap_saved_active;
 
 	in_dotrap++;
 	for (;;) {
@@ -502,13 +505,19 @@ dotrap(void)
 					 */
 					prev_evalskip  = evalskip;
 					prev_skipcount = skipcount;
+					prev_trap_saved_status = trap_saved_status;
+					prev_trap_saved_active = trap_saved_active;
 					evalskip = 0;
 
 					last_trapsig = i;
 					savestatus = exitstatus;
+					trap_saved_active = 1;
+					trap_saved_status = savestatus;
 					setstackmark(&smark);
 					evalstring(stsavestr(trap[i]), 0);
 					popstackmark(&smark);
+					trap_saved_status = prev_trap_saved_status;
+					trap_saved_active = prev_trap_saved_active;
 
 					/*
 					 * If such a command was not
@@ -557,6 +566,12 @@ setinteractive(void)
 	setsignal(SIGTERM);
 }
 
+int
+gettrapstatus(void)
+{
+	return trap_saved_active && rootshell ? trap_saved_status : -1;
+}
+
 
 /*
  * Called to exit the shell.
@@ -579,24 +594,31 @@ exitshell_savedstatus(void)
 	sigset_t sigs;
 
 	if (!exiting) {
-		if (in_dotrap && last_trapsig) {
-			sig = last_trapsig;
-			exiting_exitstatus = sig + 128;
-		} else
+		if (trap_saved_active && rootshell)
+			exiting_exitstatus = trap_saved_status;
+		else
 			exiting_exitstatus = oexitstatus;
 	}
 	exitstatus = oexitstatus = exiting_exitstatus;
 	if (!setjmp(loc1.loc)) {
 		handler = &loc1;
 		if ((p = trap[0]) != NULL && *p != '\0') {
+			int prev_trap_saved_status, prev_trap_saved_active;
+
 			/*
 			 * Reset evalskip, or the trap on EXIT could be
 			 * interrupted if the last command was a "return".
 			 */
 			evalskip = 0;
 			trap[0] = NULL;
+			prev_trap_saved_status = trap_saved_status;
+			prev_trap_saved_active = trap_saved_active;
+			trap_saved_active = 1;
+			trap_saved_status = exiting_exitstatus;
 			FORCEINTON;
 			evalstring(p, 0);
+			trap_saved_status = prev_trap_saved_status;
+			trap_saved_active = prev_trap_saved_active;
 		}
 	} else if (exception != EXEXIT) {
 		exiting_exitstatus = exitstatus;

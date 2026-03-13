@@ -46,5 +46,6 @@ void onsig(int);
 void dotrap(void);
 void trap_init(void);
 void setinteractive(void);
+int gettrapstatus(void);
 void exitshell(int) __dead2;
 void exitshell_savedstatus(void) __dead2;
