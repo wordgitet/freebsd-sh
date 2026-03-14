@@ -75,6 +75,8 @@ main(int argc, char *argv[])
 				numsig = strtol(*argv, &ep, 10);
 				if (!**argv || *ep)
 					errx(2, "invalid signal number: %s", *argv);
+				if (numsig >= 384)
+					numsig -= 384;
 				if (numsig >= 128)
 					numsig -= 128;
 				if (numsig <= 0 || numsig >= NSIG)

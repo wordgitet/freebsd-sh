@@ -124,6 +124,7 @@ static int ttyfd = -1;
 static void restartjob(struct job *);
 #endif
 static void freejob(struct job *);
+static int exitsigstatus(int);
 static int waitcmdloop(struct job *);
 static struct job *getjob_nonotfound(const char *);
 static struct job *getjob(const char *);
@@ -587,7 +588,7 @@ waitcmdloop(struct job *job)
 				if (WIFEXITED(status))
 					retval = WEXITSTATUS(status);
 				else
-					retval = WTERMSIG(status) + 128;
+					retval = exitsigstatus(WTERMSIG(status));
 				freejob(job);
 				return retval;
 			}
@@ -610,7 +611,7 @@ waitcmdloop(struct job *job)
 
 	sig = pendingsig_waitcmd;
 	pendingsig_waitcmd = 0;
-	return sig + 128;
+	return exitsigstatus(sig);
 }
 
 
@@ -741,6 +742,12 @@ killjob(const char *name, int sig)
 		} else
 			ret = 0;
 	return ret;
+}
+
+static int
+exitsigstatus(int sig)
+{
+	return 384 + sig;
 }
 
 /*
@@ -1123,7 +1130,7 @@ waitforjob(struct job *jp, int *signaled)
 		st = WSTOPSIG(status) + 128;
 #endif
 	else
-		st = WTERMSIG(status) + 128;
+		st = exitsigstatus(WTERMSIG(status));
 	if (! JOBS || jp->state == JOBDONE)
 		freejob(jp);
 	if (!int_pending()) {

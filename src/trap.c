@@ -89,6 +89,7 @@ static int exiting;		/* exitshell() has been called */
 static int exiting_exitstatus;	/* value passed to exitshell() */
 
 static int getsigaction(int, sig_t *);
+static int exitsig(int);
 static int
 is_tty_stopsig(int signo)
 {
@@ -679,6 +680,7 @@ exitshell_savedstatus(void)
 		histsave();
 #endif
 	}
+	sig = exitsig(exiting_exitstatus);
 	if (sig != 0 && sig != SIGSTOP && sig != SIGTSTP && sig != SIGTTIN &&
 	    sig != SIGTTOU) {
 		signal(sig, SIG_DFL);
@@ -689,4 +691,13 @@ exitshell_savedstatus(void)
 		/* If the default action is to ignore, fall back to _exit(). */
 	}
 	_exit(exiting_exitstatus);
+}
+static int
+exitsig(int status)
+{
+	if (status >= 384 && status < 384 + NSIG)
+		return status - 384;
+	if (status >= 128 && status < 128 + NSIG)
+		return status - 128;
+	return 0;
 }

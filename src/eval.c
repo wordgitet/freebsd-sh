@@ -1098,7 +1098,8 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		listsetvar(&varlist, VNOSET);
 
 	/* Fork off a child process if necessary. */
-	if ((cmdentry.cmdtype == CMDNORMAL || cmdentry.cmdtype == CMDUNKNOWN) &&
+	if (rootshell &&
+	    (cmdentry.cmdtype == CMDNORMAL || cmdentry.cmdtype == CMDUNKNOWN) &&
 	    (flags & EV_BACKCMD) == 0 && argc > 0 && is_shell_command(argv[0]))
 		flushinput();
 
