@@ -905,19 +905,10 @@ static void
 strtodest(const char *p, int flag, int subtype, int quoted,
     struct worddest *dst)
 {
-	if (subtype == VSLENGTH)
+	if (subtype == VSLENGTH || subtype == VSTRIMLEFT ||
+	    subtype == VSTRIMLEFTMAX || subtype == VSTRIMRIGHT ||
+	    subtype == VSTRIMRIGHTMAX)
 		STPUTS(p, expdest);
-	else if (subtype == VSTRIMLEFT || subtype == VSTRIMLEFTMAX ||
-	    subtype == VSTRIMRIGHT || subtype == VSTRIMRIGHTMAX) {
-		if ((flag & (EXP_GLOB | EXP_CASE)) != 0 && dst == NULL) {
-			if (quoted)
-				STPUTS_QUOTES(p, DQSYNTAX, expdest);
-			else
-				STPUTS_PATTERN(p, expdest);
-		} else {
-			STPUTS(p, expdest);
-		}
-	}
 	else if (flag & EXP_SPLIT && !quoted && dst != NULL)
 		STPUTS_SPLIT(p, BASESYNTAX, flag, expdest, dst);
 	else if (flag & (EXP_GLOB | EXP_CASE)) {
