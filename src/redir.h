@@ -40,5 +40,5 @@ union node;
 void redirect(union node *, int);
 void popredir(void);
 int fd0_redirected_p(void);
+int fd0_redirected_here_p(void);
 void clearredir(void);
-

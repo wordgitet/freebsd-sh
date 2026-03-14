@@ -64,6 +64,7 @@ struct redirtab {
 	struct redirtab *next;
 	int renamed[10];
 	int fd0_redirected;
+	int fd0_redirected_here;
 	unsigned int empty_redirs;
 };
 
@@ -76,6 +77,7 @@ static struct redirtab *redirlist;
  * if it hasn't already been redirected.
 */
 static int fd0_redirected = 0;
+static int fd0_redirected_here = 0;
 
 /* Number of redirtabs that have not been allocated. */
 static unsigned int empty_redirs = 0;
@@ -107,6 +109,7 @@ redirect(union node *redir, int flags)
 	struct redirtab *sv = NULL;
 	int i;
 	int fd;
+	int redirected_fd0 = 0;
 	char memory[10];	/* file descriptors to write to memory */
 
 	INTOFF;
@@ -120,6 +123,7 @@ redirect(union node *redir, int flags)
 			for (i = 0 ; i < 10 ; i++)
 				sv->renamed[i] = EMPTY;
 			sv->fd0_redirected = fd0_redirected;
+			sv->fd0_redirected_here = fd0_redirected_here;
 			sv->empty_redirs = empty_redirs - 1;
 			sv->next = redirlist;
 			redirlist = sv;
@@ -128,8 +132,10 @@ redirect(union node *redir, int flags)
 	}
 	for (n = redir ; n ; n = n->nfile.next) {
 		fd = n->nfile.fd;
-		if (fd == 0)
+		if (fd == 0) {
 			fd0_redirected = 1;
+			redirected_fd0 = 1;
+		}
 		if ((n->nfile.type == NTOFD || n->nfile.type == NFROMFD) &&
 		    n->ndup.dupfd == fd)
 			continue; /* redirect from/to same file descriptor */
@@ -154,6 +160,8 @@ redirect(union node *redir, int flags)
 		INTON;
 		INTOFF;
 	}
+	if ((flags & REDIR_PUSH) && redirected_fd0)
+		fd0_redirected_here = 1;
 	if (memory[1])
 		out1 = &memout;
 	if (memory[2])
@@ -344,6 +352,7 @@ popredir(void)
 		}
 	}
 	fd0_redirected = rp->fd0_redirected;
+	fd0_redirected_here = rp->fd0_redirected_here;
 	empty_redirs = rp->empty_redirs;
 	redirlist = rp->next;
 	ckfree(rp);
@@ -355,6 +364,12 @@ int
 fd0_redirected_p(void)
 {
         return fd0_redirected != 0;
+}
+
+int
+fd0_redirected_here_p(void)
+{
+	return fd0_redirected_here != 0;
 }
 
 /*

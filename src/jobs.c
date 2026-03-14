@@ -959,7 +959,8 @@ forkshell(struct job *jp, union node *n, int mode)
 		} else if (mode == FORK_BG) {
 			ignoresig(SIGINT);
 			ignoresig(SIGQUIT);
-			if (jp == NULL || jp->nprocs == 0) {
+			if ((jp == NULL || jp->nprocs == 0) &&
+			    !fd0_redirected_here_p()) {
 				close(0);
 				if (open(_PATH_DEVNULL, O_RDONLY) != 0)
 					error("cannot open %s: %s",
@@ -970,7 +971,8 @@ forkshell(struct job *jp, union node *n, int mode)
 		if (mode == FORK_BG) {
 			ignoresig(SIGINT);
 			ignoresig(SIGQUIT);
-			if (jp == NULL || jp->nprocs == 0) {
+			if ((jp == NULL || jp->nprocs == 0) &&
+			    !fd0_redirected_here_p()) {
 				close(0);
 				if (open(_PATH_DEVNULL, O_RDONLY) != 0)
 					error("cannot open %s: %s",
