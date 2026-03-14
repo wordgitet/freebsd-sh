@@ -91,7 +91,7 @@ static int is_valid_fast_cmdsubst(union node *n);
 static void evalcommand(union node *, int, struct backcmd *);
 static void prehash(union node *);
 static int is_shell_command(const char *);
-static int pipeline_cmd_needs_shell_stdin(union node *n);
+static int pipeneedsstdin(union node *n);
 
 
 /*
@@ -590,7 +590,7 @@ evalpipe(union node *n)
 				error("Pipe call failed: %s", strerror(errno));
 			}
 		}
-		if (prevfd < 0 && pipeline_cmd_needs_shell_stdin(lp->n))
+		if (prevfd < 0 && pipeneedsstdin(lp->n))
 			flushinput();
 		if (forkshell(jp, lp->n, n->npipe.backgnd) == 0) {
 			INTON;
@@ -625,13 +625,24 @@ evalpipe(union node *n)
 }
 
 static int
-pipeline_cmd_needs_shell_stdin(union node *n)
+pipeneedsstdin(union node *n)
 {
-	char *cmd;
-	char *name, *p;
+	char *cmd, *name;
+	char *p;
 	int special;
-	int need_stdin = 1;
 
+	if (n->type == NCMD && n->ncmd.args != NULL) {
+		name = n->ncmd.args->narg.text;
+		for (p = name; *p != '\0'; p++) {
+			if (BASESYNTAX[(unsigned char)*p] == CCTL)
+				goto fallback;
+		}
+		if (*name != '\0' && find_builtin(name, &special) >= 0)
+			return strcmp(name, "read") == 0;
+		return 1;
+	}
+
+fallback:
 	cmd = commandtext(n);
 	name = cmd;
 	while (*name == ' ' || *name == '\t')
@@ -640,11 +651,12 @@ pipeline_cmd_needs_shell_stdin(union node *n)
 		continue;
 	if (*p != '\0')
 		*p = '\0';
-	if (*name != '\0' && find_builtin(name, &special) >= 0 &&
-	    strcmp(name, "read") != 0)
-		need_stdin = 0;
+	if (*name != '\0' && find_builtin(name, &special) >= 0) {
+		ckfree(cmd);
+		return strcmp(name, "read") == 0;
+	}
 	ckfree(cmd);
-	return need_stdin;
+	return 1;
 }
 
 static int
