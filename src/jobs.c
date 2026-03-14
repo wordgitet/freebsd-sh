@@ -1291,7 +1291,7 @@ dowait(int mode, struct job *job)
 	INTON;
 	if (!thisjob || thisjob->state == 0)
 		;
-	else if (iflag && (!rootshell || thisjob == job) &&
+	else if ((((iflag && !rootshell) || thisjob == job)) &&
 	    thisjob->foreground && thisjob->state != JOBSTOPPED) {
 		sig = 0;
 		coredump = 0;
