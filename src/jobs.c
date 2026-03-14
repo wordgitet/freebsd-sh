@@ -1416,6 +1416,40 @@ cmdtxtdogroup(union node *n)
 	cmdputs("; done");
 }
 
+static int
+cmdtxtneedgroup(union node *n)
+{
+	switch (n->type) {
+	case NSEMI:
+	case NAND:
+	case NOR:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static void
+cmdtxtrdir(union node *n)
+{
+	union node *np;
+
+	if (n->nredir.n != NULL) {
+		if (cmdtxtneedgroup(n->nredir.n)) {
+			cmdputs("{ ");
+			cmdtxt(n->nredir.n);
+			cmdputs("; }");
+		} else {
+			cmdtxt(n->nredir.n);
+		}
+	}
+	for (np = n->nredir.redirect ; np ; np = np->nfile.next) {
+		if (n->nredir.n != NULL || np != n->nredir.redirect)
+			cmdputs(" ");
+		cmdtxt(np);
+	}
+}
+
 
 static void
 cmdtxtredir(union node *n, const char *op, int deffd)
@@ -1471,6 +1505,8 @@ cmdtxt(union node *n)
 			if (lp->next)
 				cmdputs(" | ");
 		}
+		if (n->npipe.backgnd)
+			cmdputs(" &");
 		break;
 	case NSUBSHELL:
 		cmdputs("(");
@@ -1478,8 +1514,13 @@ cmdtxt(union node *n)
 		cmdputs(")");
 		break;
 	case NREDIR:
+		cmdtxtrdir(n);
+		break;
 	case NBACKGND:
-		cmdtxt(n->nredir.n);
+		cmdtxtrdir(n);
+		if (n->nredir.n != NULL || n->nredir.redirect != NULL)
+			cmdputs(" ");
+		cmdputs("&");
 		break;
 	case NIF:
 		cmdputs("if ");

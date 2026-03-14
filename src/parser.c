@@ -131,6 +131,7 @@ static int pgetc_linecont(void);
 static void getusername(char *, size_t);
 static int isoverriddenkwd(const char *);
 static int isblankaliasval(const char *);
+static int cmdsubstsafe(union node *);
 
 
 static void *
@@ -217,6 +218,54 @@ isblankaliasval(const char *val)
 	while (*val == ' ' || *val == '\t')
 		val++;
 	return *val == '\0';
+}
+
+static int
+cmdsubstargtextsafe(const char *text)
+{
+	while (*text != '\0') {
+		if (BASESYNTAX[(unsigned char)*text] == CCTL)
+			return 0;
+		text++;
+	}
+	return 1;
+}
+
+static int
+cmdsubstsafe(union node *n)
+{
+	struct nodelist *lp;
+	union node *arg;
+
+	if (n == NULL)
+		return 1;
+
+	switch (n->type) {
+	case NSEMI:
+	case NAND:
+	case NOR:
+		return cmdsubstsafe(n->nbinary.ch1) &&
+		    cmdsubstsafe(n->nbinary.ch2);
+	case NCMD:
+		if (n->ncmd.redirect != NULL)
+			return 0;
+		for (arg = n->ncmd.args; arg; arg = arg->narg.next) {
+			if (arg->type != NARG || arg->narg.backquote != NULL ||
+			    !cmdsubstargtextsafe(arg->narg.text))
+				return 0;
+		}
+		return 1;
+	case NPIPE:
+		if (n->npipe.backgnd)
+			return 0;
+		for (lp = n->npipe.cmdlist; lp; lp = lp->next) {
+			if (!cmdsubstsafe(lp->n))
+				return 0;
+		}
+		return 1;
+	default:
+		return 0;
+	}
 }
 
 
@@ -1256,7 +1305,8 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		n = list(0);
 		consumetoken(TRP);
 		if (suppress_bq_alias ||
-		    (plinno != bq_startlinno && n != NULL && n->type == NSEMI)) {
+		    (plinno != bq_startlinno && n != NULL && n->type == NSEMI &&
+		    cmdsubstsafe(n))) {
 			if (suppress_bq_alias) {
 				suppressalias--;
 				suppress_bq_alias = 0;
