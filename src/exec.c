@@ -92,6 +92,8 @@ static void printentry(struct tblentry *, int);
 static struct tblentry *cmdlookup(const char *, int);
 static void delete_cmd_entry(void);
 static void addcmdentry(const char *, struct cmdentry *);
+static int isreservedword(const char *);
+static char *find_path_command(const char *, const char *);
 
 
 
@@ -724,6 +726,39 @@ print_absolute_path(const char *name)
 	outcslow('\n', out1);
 }
 
+static int
+isreservedword(const char *name)
+{
+	const char *const *pp;
+
+	for (pp = parsekwd; *pp; pp++) {
+		if (**pp == *name && equal(*pp, name))
+			return 1;
+	}
+
+	return equal(name, "in");
+}
+
+static char *
+find_path_command(const char *name, const char *path)
+{
+	const char *opt;
+	char *fullname;
+	struct stat statb;
+
+	while ((fullname = padvance(&path, &opt, name)) != NULL) {
+		if (opt != NULL)
+			goto next;
+		if (stat(fullname, &statb) == 0 && S_ISREG(statb.st_mode) &&
+		    eaccess(fullname, X_OK) == 0)
+			return fullname;
+next:
+		stunalloc(fullname);
+	}
+
+	return NULL;
+}
+
 
 /*
  * Shared code for the following builtin commands:
@@ -745,11 +780,12 @@ typecmd_impl(int argc, char **argv, int cmd, const char *path)
 
 	for (i = 1; i < argc; i++) {
 		/* First look at the keywords */
-		for (pp = parsekwd; *pp; pp++)
+		for (pp = parsekwd; *pp; pp++) {
 			if (**pp == *argv[i] && equal(*pp, argv[i]))
 				break;
+		}
 
-		if (*pp) {
+		if (*pp || isreservedword(argv[i])) {
 			if (cmd == TYPECMD_SMALLV)
 				out1fmt("%s\n", argv[i]);
 			else
@@ -818,13 +854,29 @@ typecmd_impl(int argc, char **argv, int cmd, const char *path)
 			break;
 
 		case CMDBUILTIN:
-			if (cmd == TYPECMD_SMALLV)
+			if (!entry.special && cmd != TYPECMD_TYPE) {
+				char *fullname;
+
+				fullname = find_path_command(argv[i], path);
+				if (fullname != NULL) {
+					if (cmd == TYPECMD_SMALLV) {
+						print_absolute_path(fullname);
+					} else {
+						out1fmt("%s is a substitutive shell builtin for ",
+						    argv[i]);
+						print_absolute_path(fullname);
+					}
+					break;
+				}
+			}
+			if (cmd == TYPECMD_SMALLV) {
 				out1fmt("%s\n", argv[i]);
-			else if (entry.special)
+			} else if (entry.special) {
 				out1fmt("%s is a special shell builtin\n",
 				    argv[i]);
-			else
+			} else {
 				out1fmt("%s is a shell builtin\n", argv[i]);
+			}
 			break;
 
 		default:

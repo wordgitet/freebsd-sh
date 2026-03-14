@@ -54,6 +54,8 @@
 #include "error.h"
 #include "mystring.h"
 #include "syntax.h"
+#include "input.h"
+#include "redir.h"
 #include "trap.h"
 
 #undef eflag
@@ -235,6 +237,8 @@ readcmd(int argc __unused, char **argv __unused)
 	backslash = 0;
 	STARTSTACKSTR(p);
 	lastnonifs = lastnonifsws = -1;
+	if (!fd0_redirected_p())
+		flushinput();
 	fdctx_init(STDIN_FILENO, &fdctx);
 	for (;;) {
 		c = 0;
