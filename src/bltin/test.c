@@ -596,8 +596,10 @@ newerf (const char *f1, const char *f2)
 {
 	struct stat b1, b2;
 
-	if (stat(f1, &b1) != 0 || stat(f2, &b2) != 0)
+	if (stat(f1, &b1) != 0)
 		return 0;
+	if (stat(f2, &b2) != 0)
+		return 1;
 
 	if (b1.st_mtim.tv_sec > b2.st_mtim.tv_sec)
 		return 1;

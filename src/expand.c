@@ -84,7 +84,7 @@ static char *expdest;			/* output of current string */
 
 static const char *argstr(const char *, struct nodelist **restrict, int,
     struct worddest *);
-static const char *exptilde(const char *, int);
+static const char *exptilde(const char *, int, struct worddest *);
 static const char *expari(const char *, struct nodelist **restrict, int,
     struct worddest *);
 static void expbackq(union node *, int, int, struct worddest *);
@@ -104,6 +104,7 @@ static int expsortcmp(const void *, const void *);
 static int patmatch(const char *, const char *);
 static void cvtnum(int, char *);
 static int collate_range_cmp(wchar_t, wchar_t);
+static int parse_pat_collsym(const char **, wchar_t *, char);
 
 void
 emptyarglist(struct arglist *list)
@@ -166,9 +167,12 @@ stputs_pattern(const char *data, char *p)
 
 	while ((c = *data++) != '\0') {
 		CHECKSTRSPACE(3, p);
-		if (c == '\\' && *data != '\0') {
+		if (c == '\\') {
 			USTPUTC(CTLESC, p);
-			USTPUTC(*data++, p);
+			if (*data != '\0')
+				USTPUTC(*data++, p);
+			else
+				USTPUTC('\\', p);
 			continue;
 		}
 		if (BASESYNTAX[(int)c] == CCTL)
@@ -302,7 +306,7 @@ argstr(const char *p, struct nodelist **restrict argbackq, int flag,
 	lit_quoted = flag & EXP_LIT_QUOTED;
 	flag &= ~(EXP_SPLIT_LIT | EXP_LIT_QUOTED);
 	if (*p == '~' && (flag & (EXP_TILDE | EXP_VARTILDE)))
-		p = exptilde(p, flag);
+		p = exptilde(p, flag, dst);
 	for (;;) {
 		CHECKSTRSPACE(2, expdest);
 		switch (c = *p++) {
@@ -361,7 +365,7 @@ argstr(const char *p, struct nodelist **restrict argbackq, int flag,
 			    (c != '=' || firsteq)) {
 				if (c == '=')
 					firsteq = 0;
-				p = exptilde(p, flag);
+				p = exptilde(p, flag, dst);
 			}
 			break;
 		default:
@@ -380,7 +384,7 @@ argstr(const char *p, struct nodelist **restrict argbackq, int flag,
  * returning the next position in the input string to process.
  */
 static const char *
-exptilde(const char *p, int flag)
+exptilde(const char *p, int flag, struct worddest *dst)
 {
 	char c;
 	const char *startp = p;
@@ -418,9 +422,15 @@ exptilde(const char *p, int flag)
 				home = pw != NULL ? pw->pw_dir : NULL;
 			}
 			STADJUST(-len, expdest);
-			if (home == NULL || *home == '\0')
+			if (home == NULL)
 				return (startp);
+			if (*user == '\0' && home[0] == '\0' && dst != NULL &&
+			    expdest == stackblock())
+				dst->state = WORD_QUOTEMARK;
 			strtodest(home, flag, VSNORMAL, 1, NULL);
+			if (c == '/' && home[0] != '\0' &&
+			    home[strlen(home) - 1] == '/')
+				p++;
 			return (p);
 		}
 		p++;
@@ -895,10 +905,19 @@ static void
 strtodest(const char *p, int flag, int subtype, int quoted,
     struct worddest *dst)
 {
-	if (subtype == VSLENGTH || subtype == VSTRIMLEFT ||
-	    subtype == VSTRIMLEFTMAX || subtype == VSTRIMRIGHT ||
-	    subtype == VSTRIMRIGHTMAX)
+	if (subtype == VSLENGTH)
 		STPUTS(p, expdest);
+	else if (subtype == VSTRIMLEFT || subtype == VSTRIMLEFTMAX ||
+	    subtype == VSTRIMRIGHT || subtype == VSTRIMRIGHTMAX) {
+		if ((flag & (EXP_GLOB | EXP_CASE)) != 0 && dst == NULL) {
+			if (quoted)
+				STPUTS_QUOTES(p, DQSYNTAX, expdest);
+			else
+				STPUTS_PATTERN(p, expdest);
+		} else {
+			STPUTS(p, expdest);
+		}
+	}
 	else if (flag & EXP_SPLIT && !quoted && dst != NULL)
 		STPUTS_SPLIT(p, BASESYNTAX, flag, expdest, dst);
 	else if (flag & (EXP_GLOB | EXP_CASE)) {
@@ -1283,6 +1302,39 @@ match_charclass(const char *p, wchar_t chr, const char **end)
 	return iswctype(chr, cclass);
 }
 
+static int
+parse_pat_collsym(const char **pp, wchar_t *wc, char marker)
+{
+	char name[MB_LEN_MAX + 1];
+	const char *p, *end;
+	size_t len;
+	int chrlen;
+
+	p = *pp;
+	if (*p != marker)
+		return 0;
+	p++;
+	end = strstr(p, marker == '.' ? ".]" : "=]");
+	if (end == NULL || end == p)
+		return 0;
+	len = end - p;
+	if (len >= sizeof(name))
+		return 0;
+	memcpy(name, p, len);
+	name[len] = '\0';
+	if (localeisutf8) {
+		chrlen = mbtowc(wc, name, len);
+		if (chrlen <= 0 || (size_t)chrlen != len)
+			return 0;
+	} else {
+		if (len != 1)
+			return 0;
+		*wc = (unsigned char)name[0];
+	}
+	*pp = end + 2;
+	return 1;
+}
+
 
 /*
  * Returns true if the pattern matches the string.
@@ -1307,7 +1359,13 @@ patmatch(const char *pattern, const char *string)
 				goto backtrack;
 			return 1;
 		case CTLESC:
-			if (*q++ != *p++)
+			c = *p++;
+			if (c == '\\' && *p != '\0') {
+				if (*p == CTLESC)
+					p++;
+				c = *p++;
+			}
+			if (*q++ != c)
 				goto backtrack;
 			break;
 		case '?':
@@ -1377,9 +1435,20 @@ patmatch(const char *pattern, const char *string)
 						continue;
 					}
 				}
-				if (c == CTLESC)
+				if (c == '[' &&
+				    (*p == '.' || *p == '=') &&
+				    parse_pat_collsym(&p, &wc, *p)) {
+					/* wc already parsed */
+				} else if (c == CTLESC) {
 					c = *p++;
-				if (localeisutf8 && c & 0x80) {
+					if (localeisutf8 && c & 0x80) {
+						p--;
+						wc = get_wc(&p);
+						if (wc == 0) /* bad utf-8 */
+							return 0;
+					} else
+						wc = (unsigned char)c;
+				} else if (localeisutf8 && c & 0x80) {
 					p--;
 					wc = get_wc(&p);
 					if (wc == 0) /* bad utf-8 */
@@ -1390,7 +1459,13 @@ patmatch(const char *pattern, const char *string)
 					p++;
 					if (*p == CTLESC)
 						p++;
-					if (localeisutf8) {
+					if (*p == '[' &&
+					    (p[1] == '.' || p[1] == '=')) {
+						p++;
+						if (!parse_pat_collsym(&p, &wc2,
+						    *p))
+							return 0;
+					} else if (localeisutf8) {
 						wc2 = get_wc(&p);
 						if (wc2 == 0) /* bad utf-8 */
 							return 0;

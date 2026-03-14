@@ -204,7 +204,7 @@ cmdloop(int top)
 		n = parsecmd(inter);
 		/* showtree(n); DEBUG */
 		if (n == NEOF) {
-			if (!top || numeof >= 50)
+			if (!top || !iflag || numeof >= 50)
 				break;
 			if (!stoppedjobs()) {
 				if (!Iflag)
