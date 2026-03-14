@@ -100,6 +100,7 @@ static const unsigned char optname[] =
 
 extern char *minusc;		/* argument to -c option */
 extern char *arg0;		/* $0 */
+extern int shmode;		/* invoked as sh */
 extern struct shparam shellparam;  /* $@ */
 extern char **argptr;		/* argument list for builtin commands */
 extern char *shoptarg;		/* set by nextopt */

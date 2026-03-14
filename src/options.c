@@ -56,6 +56,7 @@
 #endif
 
 char *arg0;			/* value of $0 */
+int shmode;			/* invoked as sh */
 struct shparam shellparam;	/* current positional parameters */
 char **argptr;			/* argument list for builtin commands */
 char *shoptarg;			/* set by nextopt (like getopt) */
@@ -81,6 +82,7 @@ procargs(int argc, char **argv)
 {
 	int i, login;
 	char *scriptname;
+	char *shellname;
 
 	argptr = argv;
 	login = argptr[0] != NULL && argptr[0][0] == '-';
@@ -102,6 +104,12 @@ procargs(int argc, char **argv)
 		if (optval[i] == 2)
 			optval[i] = 0;
 	arg0 = argv[0];
+	shellname = strrchr(argv[0], '/');
+	if (shellname != NULL)
+		shellname++;
+	else
+		shellname = argv[0];
+	shmode = strcmp(shellname, "sh") == 0;
 	if (sflag == 0 && minusc == NULL) {
 		scriptname = *argptr++;
 		setinputfile(scriptname, 0, -1 /* verify */);
@@ -192,6 +200,10 @@ options(int cmdline)
 				q = *argptr++;
 				if (q == NULL || minusc != NULL)
 					error("Bad -c option");
+				if ((strcmp(q, "-") == 0 ||
+				    strcmp(q, "--") == 0) &&
+				    *argptr != NULL)
+					q = *argptr++;
 				minusc = q;
 			} else if (c == 'l' && cmdline) {
 				login = 1;

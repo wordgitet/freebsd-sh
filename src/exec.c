@@ -365,11 +365,17 @@ find_command(const char *name, struct cmdentry *entry, int act,
 
 	cd = 0;
 
-	/* If name is in the table, we're done */
+	/* If name is in the table, we're done unless a POSIX special wins. */
 	if ((cmdp = cmdlookup(name, 0)) != NULL) {
-		if (cmdp->cmdtype == CMDFUNCTION && act & DO_NOFUNC)
-			cmdp = NULL;
-		else
+		if (cmdp->cmdtype == CMDFUNCTION) {
+			if (act & DO_NOFUNC)
+				cmdp = NULL;
+			else if (shmode && (i = find_builtin(name, &spec)) >= 0 &&
+			    spec)
+				cmdp = NULL;
+			else
+				goto success;
+		} else
 			goto success;
 	}
 

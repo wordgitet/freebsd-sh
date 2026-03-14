@@ -678,7 +678,6 @@ simplecmd(union node **rpp, union node *redir)
 	union node *args, **app;
 	union node **orig_rpp = rpp;
 	union node *n = NULL;
-	int special;
 	int savecheckkwd;
 
 	/* If we don't have any redirections already, then we must reset */
@@ -726,9 +725,6 @@ simplecmd(union node **rpp, union node *redir)
 				n->narg.text[strlen(n->narg.text) - 1]))
 				synerror("Bad function name");
 			rmescapes(n->narg.text);
-			if (find_builtin(n->narg.text, &special) >= 0 &&
-			    special)
-				synerror("Cannot override a special builtin with a function");
 			n->type = NDEFUN;
 			n->narg.next = command();
 			funclinno = 0;

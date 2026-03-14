@@ -308,12 +308,13 @@ find_dot_file(char *basename)
 int
 dotcmd(int argc, char **argv)
 {
+	struct stackmark smark;
+	union node *n;
 	char *filename, *fullname;
+	int any;
 
 	if (argc < 2)
 		error("missing filename");
-
-	exitstatus = 0;
 
 	/*
 	 * Because we have historically not supported any options,
@@ -324,7 +325,28 @@ dotcmd(int argc, char **argv)
 	fullname = find_dot_file(filename);
 	setinputfile(fullname, 1, -1 /* verify */);
 	commandname = fullname;
-	cmdloop(0);
+	any = 0;
+	setstackmark(&smark);
+	exitstatus = oexitstatus;
+	for (;;) {
+		n = parsecmd(0);
+		if (n == NEOF)
+			break;
+		if (n != NULL && nflag == 0) {
+			evaltree(n, 0);
+			any = 1;
+		}
+		popstackmark(&smark);
+		setstackmark(&smark);
+		if (evalskip != 0) {
+			if (evalskip == SKIPRETURN)
+				evalskip = 0;
+			break;
+		}
+	}
+	popstackmark(&smark);
+	if (!any)
+		exitstatus = 0;
 	popfile();
 	return exitstatus;
 }

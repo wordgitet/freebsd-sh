@@ -115,6 +115,8 @@ evalcmd(int argc, char **argv)
         char *concat;
         char **ap;
 
+        if (argc > 1 && strcmp(argv[1], "--") == 0)
+                argc--, argv++;
         if (argc > 1) {
                 p = argv[1];
                 if (argc > 2) {
@@ -1371,6 +1373,9 @@ truecmd(int argc __unused, char **argv __unused)
 int
 execcmd(int argc, char **argv)
 {
+	struct jmploc jmploc;
+	struct jmploc *savehandler;
+	int saveiflag, savemflag;
 	int i;
 
 	/*
@@ -1380,13 +1385,25 @@ execcmd(int argc, char **argv)
 	if (argc > 1 && strcmp(argv[1], "--") == 0)
 		argc--, argv++;
 	if (argc > 1) {
+		saveiflag = iflag;
+		savemflag = mflag;
+		savehandler = handler;
+		if (setjmp(jmploc.loc)) {
+			handler = savehandler;
+			iflag = saveiflag;
+			mflag = savemflag;
+			optschanged();
+			if (exception != EXERROR || !saveiflag)
+				exraise(exception);
+			return exitstatus;
+		}
+		handler = &jmploc;
 		iflag = 0;		/* exit on error */
 		mflag = 0;
 		optschanged();
 		for (i = 0; i < cmdenviron->count; i++)
 			setvareq(cmdenviron->args[i], VEXPORT|VSTACK);
 		shellexec(argv + 1, environment(), pathval(), 0);
-
 	}
 	return 0;
 }
