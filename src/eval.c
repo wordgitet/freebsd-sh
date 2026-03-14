@@ -91,6 +91,7 @@ static int is_valid_fast_cmdsubst(union node *n);
 static void evalcommand(union node *, int, struct backcmd *);
 static void prehash(union node *);
 static int is_shell_command(const char *);
+static int pipeline_cmd_needs_shell_stdin(union node *n);
 
 
 /*
@@ -589,7 +590,7 @@ evalpipe(union node *n)
 				error("Pipe call failed: %s", strerror(errno));
 			}
 		}
-		if (prevfd < 0)
+		if (prevfd < 0 && pipeline_cmd_needs_shell_stdin(lp->n))
 			flushinput();
 		if (forkshell(jp, lp->n, n->npipe.backgnd) == 0) {
 			INTON;
@@ -623,7 +624,28 @@ evalpipe(union node *n)
 		exitstatus = 0;
 }
 
+static int
+pipeline_cmd_needs_shell_stdin(union node *n)
+{
+	char *cmd;
+	char *name, *p;
+	int special;
+	int need_stdin = 1;
 
+	cmd = commandtext(n);
+	name = cmd;
+	while (*name == ' ' || *name == '\t')
+		name++;
+	for (p = name; *p != '\0' && *p != ' ' && *p != '\t'; p++)
+		continue;
+	if (*p != '\0')
+		*p = '\0';
+	if (*name != '\0' && find_builtin(name, &special) >= 0 &&
+	    strcmp(name, "read") != 0)
+		need_stdin = 0;
+	ckfree(cmd);
+	return need_stdin;
+}
 
 static int
 is_valid_fast_cmdsubst(union node *n)
