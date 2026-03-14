@@ -844,6 +844,7 @@ int
 unsetcmd(int argc __unused, char **argv __unused)
 {
 	char **ap;
+	char *readonly;
 	int i;
 	int flg_func = 0;
 	int flg_var = 0;
@@ -858,14 +859,19 @@ unsetcmd(int argc __unused, char **argv __unused)
 	if (flg_func == 0 && flg_var == 0)
 		flg_var = 1;
 
+	readonly = NULL;
 	INTOFF;
 	for (ap = argptr; *ap ; ap++) {
 		if (flg_func)
 			ret |= unsetfunc(*ap);
-		if (flg_var)
-			ret |= unsetvar(*ap);
+		if (flg_var && unsetvar(*ap) != 0) {
+			readonly = *ap;
+			break;
+		}
 	}
 	INTON;
+	if (readonly != NULL)
+		error("%s: is read only", readonly);
 	return ret;
 }
 

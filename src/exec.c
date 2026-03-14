@@ -93,6 +93,7 @@ static struct tblentry *cmdlookup(const char *, int);
 static void delete_cmd_entry(void);
 static void addcmdentry(const char *, struct cmdentry *);
 static int isreservedword(const char *);
+static int is_intrinsic_builtin(const char *);
 static char *find_path_command(const char *, const char *);
 
 
@@ -347,6 +348,42 @@ printentry(struct tblentry *cmdp, int verbose)
 	out1c('\n');
 }
 
+static int
+is_intrinsic_builtin(const char *name)
+{
+	static const char *const intrinsic_builtins[] = {
+		"alias",
+		"bg",
+		"builtin",
+		"cd",
+		"command",
+		"fc",
+		"fg",
+		"getopts",
+		"hash",
+		"jobs",
+		"kill",
+		"local",
+		"read",
+		"test",
+		"type",
+		"ulimit",
+		"umask",
+		"unalias",
+		"wait",
+		"[",
+		NULL,
+	};
+	const char *const *pp;
+
+	for (pp = intrinsic_builtins; *pp != NULL; pp++) {
+		if (equal(*pp, name))
+			return 1;
+	}
+
+	return 0;
+}
+
 
 
 /*
@@ -367,6 +404,7 @@ find_command(const char *name, struct cmdentry *entry, int act,
 	int builtin_index;
 	int builtin_special;
 	int cd;
+	int strict_sh_lookup;
 
 	/* If name contains a slash, don't use the hash table */
 	if (strchr(name, '/') != NULL) {
@@ -378,6 +416,8 @@ find_command(const char *name, struct cmdentry *entry, int act,
 
 	cd = 0;
 	builtin_index = find_builtin(name, &builtin_special);
+	strict_sh_lookup = shmode &&
+	    (((act & DO_NOBLTIN) != 0) || path[0] == '\0');
 
 	/* If name is in the table, we're done unless a POSIX special wins. */
 	if ((cmdp = cmdlookup(name, 0)) != NULL) {
@@ -389,12 +429,18 @@ find_command(const char *name, struct cmdentry *entry, int act,
 				cmdp = NULL;
 			else
 				goto success;
+		} else if (cmdp->cmdtype == CMDBUILTIN &&
+		    strict_sh_lookup && !cmdp->special &&
+		    !is_intrinsic_builtin(name)) {
+			cmdp = NULL;
 		} else
 			goto success;
 	}
 
 	/* Check for builtin next */
-	if (builtin_index >= 0) {
+	if (builtin_index >= 0 &&
+	    (!strict_sh_lookup || builtin_special ||
+	    is_intrinsic_builtin(name))) {
 		INTOFF;
 		cmdp = cmdlookup(name, 1);
 		if (cmdp->cmdtype == CMDFUNCTION)

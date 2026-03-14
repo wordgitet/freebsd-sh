@@ -357,6 +357,7 @@ int
 umaskcmd(int argc __unused, char **argv __unused)
 {
 	char *ap;
+	char *operand;
 	int mask;
 	int i;
 	int symbolic_mode = 0;
@@ -416,14 +417,24 @@ umaskcmd(int argc __unused, char **argv __unused)
 			umask(mask);
 		} else {
 			void *set;
+			operand = ap;
+			if (*operand == '+' || *operand == '-' || *operand == '=') {
+				operand = malloc(strlen(ap) + 2);
+				if (operand == NULL)
+					error("Out of space");
+				operand[0] = 'a';
+				strcpy(operand + 1, ap);
+			}
 			INTOFF;
-			if ((set = setmode (ap)) == NULL)
+			if ((set = setmode (operand)) == NULL)
 				error("Illegal number: %s", ap);
 
 			mask = getmode (set, ~mask & 0777);
 			umask(~mask & 0777);
 			free(set);
 			INTON;
+			if (operand != ap)
+				free(operand);
 		}
 	}
 	return 0;

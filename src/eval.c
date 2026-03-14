@@ -884,6 +884,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	int do_clearcmdentry;
 	int had_cmdsub;
 	int delayed_assigns;
+	int path_override;
 	const char *path = pathval();
 	int i;
 
@@ -897,6 +898,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	had_cmdsub = 0;
 	delayed_assigns = 0;
 	delayed_redirect = 0;
+	path_override = 0;
 	oexitstatus = exitstatus;
 	exitstatus = 0;
 	/* Add one slot at the beginning for tryexec(). */
@@ -965,6 +967,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		for (i = 0; i < varlist.count; i++)
 			if (strncmp(varlist.args[i], PATH, sizeof(PATH) - 1) == 0) {
 				path = varlist.args[i] + sizeof(PATH) - 1;
+				path_override = 1;
 				/*
 				 * On `PATH=... command`, we need to make
 				 * sure that the command isn't using the
@@ -986,6 +989,8 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 				clearcmdentry();
 				do_clearcmdentry = 1;
 			}
+		if (shmode && path_override)
+			cmd_flags |= DO_NOBLTIN;
 
 		for (;;) {
 			if (bltinonly) {

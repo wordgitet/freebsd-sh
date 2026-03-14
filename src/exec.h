@@ -60,6 +60,7 @@ struct cmdentry {
 /* action to find_command() */
 #define DO_ERR		0x01	/* prints errors */
 #define DO_NOFUNC	0x02	/* don't return shell functions, for command */
+#define DO_NOBLTIN	0x04	/* don't return regular builtins */
 
 void shellexec(char **, char **, const char *, int) __dead2;
 char *padvance(const char **, const char **, const char *);
