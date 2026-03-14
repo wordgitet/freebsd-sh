@@ -59,5 +59,6 @@ void popfilesupto(struct parsefile *);
 void popallfiles(void);
 void closescript(void);
 void flushinput(void);
+void cleardelayedaliases(void);
 
 #define pgetc_macro()	(--parsenleft >= 0? *parsenextc++ : preadbuffer())

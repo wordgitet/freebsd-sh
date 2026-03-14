@@ -877,6 +877,7 @@ readtoken(void)
 #endif
 
 	top:
+	cleardelayedaliases();
 	t = xxreadtoken();
 
 	/*

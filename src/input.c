@@ -83,6 +83,11 @@ struct parsefile {
 	struct strpush basestrpush; /* so pushing one is fast */
 };
 
+struct aliasclear {
+	struct aliasclear *next;
+	struct alias *ap;
+};
+
 
 int plinno = 1;			/* input line number */
 int parsenleft;			/* copy of parsefile->nleft */
@@ -94,11 +99,13 @@ static struct parsefile basepf = {	/* top level input file */
 	.buf = basebuf
 };
 static struct parsefile *parsefile = &basepf;	/* current input file */
+static struct aliasclear *delayedaliases;
 int whichprompt;		/* 1 == PS1, 2 == PS2 */
 
 static void pushfile(void);
 static int preadfd(void);
 static void popstring(void);
+void cleardelayedaliases(void);
 
 void
 resetinput(void)
@@ -106,6 +113,7 @@ resetinput(void)
 	int c;
 
 	popallfiles();
+	cleardelayedaliases();
 	while (parsefile->strpush)
 		popstring();
 
@@ -355,16 +363,37 @@ pushstring(const char *s, int len, struct alias *ap)
 }
 
 static void
+delayaliasclear(struct alias *ap)
+{
+	struct aliasclear *ac;
+
+	ac = malloc(sizeof(*ac));
+	if (ac == NULL) {
+		ap->flag &= ~ALIASINUSE;
+		return;
+	}
+	ac->ap = ap;
+	ac->next = delayedaliases;
+	delayedaliases = ac;
+}
+
+static void
 popstring(void)
 {
 	struct strpush *sp = parsefile->strpush;
 
 	INTOFF;
 	if (sp->ap) {
+		const char *val = sp->ap->val;
+		size_t len = strlen(val);
+
 		if (parsenextc != sp->ap->val &&
 		    (parsenextc[-1] == ' ' || parsenextc[-1] == '\t'))
 			forcealias();
-		sp->ap->flag &= ~ALIASINUSE;
+		if (len != 0 && (val[len - 1] == ' ' || val[len - 1] == '\t'))
+			sp->ap->flag &= ~ALIASINUSE;
+		else
+			delayaliasclear(sp->ap);
 	}
 	parsenextc = sp->prevstring;
 	parsenleft = sp->prevnleft;
@@ -374,6 +403,18 @@ popstring(void)
 	if (sp != &(parsefile->basestrpush))
 		ckfree(sp);
 	INTON;
+}
+
+void
+cleardelayedaliases(void)
+{
+	struct aliasclear *ac;
+
+	while ((ac = delayedaliases) != NULL) {
+		delayedaliases = ac->next;
+		ac->ap->flag &= ~ALIASINUSE;
+		free(ac);
+	}
 }
 
 /*
@@ -534,6 +575,7 @@ popallfiles(void)
 {
 	while (parsefile != &basepf)
 		popfile();
+	cleardelayedaliases();
 }
 
 
