@@ -167,6 +167,19 @@ jobctl_notty(void)
 	mflag = 0;
 }
 
+static int
+xtcsetpgrp(int fd, pid_t pgrp)
+{
+	sigset_t mask, omask;
+	int err;
+
+	sigfillset(&mask);
+	sigprocmask(SIG_BLOCK, &mask, &omask);
+	err = tcsetpgrp(fd, pgrp);
+	sigprocmask(SIG_SETMASK, &omask, NULL);
+	return (err);
+}
+
 void
 setjobctl(int on)
 {
@@ -219,11 +232,11 @@ setjobctl(int on)
 		setsignal(SIGTTOU);
 		setsignal(SIGTTIN);
 		setpgid(0, rootpid);
-		tcsetpgrp(ttyfd, rootpid);
+		xtcsetpgrp(ttyfd, rootpid);
 	} else { /* turning job control off */
 		setpgid(0, initialpgrp);
 		if (ttyfd >= 0) {
-			tcsetpgrp(ttyfd, initialpgrp);
+			xtcsetpgrp(ttyfd, initialpgrp);
 			close(ttyfd);
 			ttyfd = -1;
 		}
@@ -254,7 +267,7 @@ fgcmd(int argc __unused, char **argv __unused)
 	flushout(&output);
 	pgrp = jp->ps[0].pid;
 	if (ttyfd >= 0)
-		tcsetpgrp(ttyfd, pgrp);
+		xtcsetpgrp(ttyfd, pgrp);
 	restartjob(jp);
 	jp->foreground = 1;
 	INTOFF;
@@ -924,11 +937,18 @@ forkshell(struct job *jp, union node *n, int mode)
 				 * Only for pipelines of three or more processes
 				 * could this be reduced to two calls.
 				 */
-				if (tcsetpgrp(ttyfd, pgrp) < 0)
+				if (xtcsetpgrp(ttyfd, pgrp) < 0)
 					error("tcsetpgrp failed, errno=%d", errno);
 			}
-			setsignal(SIGTSTP);
-			setsignal(SIGTTOU);
+			if (!(wasroot && iflag && mflag &&
+			    is_inherited_sig_ign(SIGTSTP)))
+				setsignal(SIGTSTP);
+			if (!(wasroot && iflag && mflag &&
+			    is_inherited_sig_ign(SIGTTIN)))
+				setsignal(SIGTTIN);
+			if (!(wasroot && iflag && mflag &&
+			    is_inherited_sig_ign(SIGTTOU)))
+				setsignal(SIGTTOU);
 		} else if (mode == FORK_BG) {
 			ignoresig(SIGINT);
 			ignoresig(SIGQUIT);
@@ -1088,7 +1108,7 @@ waitforjob(struct job *jp, int *signaled)
 			dotrap();
 #if JOBS
 	if (jp->jobctl) {
-		if (ttyfd >= 0 && tcsetpgrp(ttyfd, rootpid) < 0)
+		if (ttyfd >= 0 && xtcsetpgrp(ttyfd, rootpid) < 0)
 			error("tcsetpgrp failed, errno=%d\n", errno);
 	}
 	if (jp->state == JOBSTOPPED)

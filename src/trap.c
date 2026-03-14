@@ -69,6 +69,8 @@
 
 
 static char sigmode[NSIG];	/* current value of signal */
+static char siginherited[NSIG];	/* signal was ignored on shell entry */
+static int startupiflag;	/* shell was invoked with -i */
 static int trap_force_signo;	/* trap is explicitly changing this signal */
 static int trap_default_signo;	/* trap is explicitly restoring true default */
 static int trap_saved_status;	/* status before the current trap action */
@@ -87,6 +89,31 @@ static int exiting;		/* exitshell() has been called */
 static int exiting_exitstatus;	/* value passed to exitshell() */
 
 static int getsigaction(int, sig_t *);
+static int
+is_tty_stopsig(int signo)
+{
+
+	return (signo == SIGTSTP || signo == SIGTTIN || signo == SIGTTOU);
+}
+
+static int
+tty_stopsig_preserve_ign(int signo)
+{
+	if (!siginherited[signo] || !is_tty_stopsig(signo))
+		return 0;
+	if (rootshell && mflag)
+		return !startupiflag;
+	if (iflag)
+		return 0;
+	return 1;
+}
+
+static int
+tty_stopsig_keep_shell_default(int signo)
+{
+
+	return (startupiflag && rootshell && mflag && is_tty_stopsig(signo));
+}
 
 
 /*
@@ -227,9 +254,10 @@ trapcmd(int argc __unused, char **argv)
 	}
 	action = NULL;
 	if (*argv && !is_number(*argv)) {
-		if (strcmp(*argv, "-") == 0)
+		if (strcmp(*argv, "-") == 0) {
+			force_default = 1;
 			argv++;
-		else {
+		} else {
 			action = *argv;
 			argv++;
 		}
@@ -250,7 +278,7 @@ trapcmd(int argc __unused, char **argv)
 		trap[signo] = action;
 		if (signo != 0) {
 			trap_force_signo = signo;
-			if (force_default)
+			if (force_default && is_tty_stopsig(signo) && iflag)
 				trap_default_signo = signo;
 			setsignal(signo);
 			trap_default_signo = 0;
@@ -316,6 +344,10 @@ setsignal(int signo)
 		action = S_CATCH;
 	else
 		action = S_IGN;
+	if (((tty_stopsig_preserve_ign(signo) ||
+	    tty_stopsig_keep_shell_default(signo)) &&
+	    trap_default_signo != signo))
+		action = S_IGN;
 	if (action == S_DFL) {
 		if (trap_default_signo != signo) {
 			switch (signo) {
@@ -336,6 +368,7 @@ setsignal(int signo)
 				break;
 #if JOBS
 			case SIGTSTP:
+			case SIGTTIN:
 			case SIGTTOU:
 				if (rootshell && mflag)
 					action = S_IGN;
@@ -361,6 +394,7 @@ setsignal(int signo)
 			return;
 		}
 		if (sigact == SIG_IGN) {
+			siginherited[signo] = 1;
 			if (mflag && (signo == SIGTSTP ||
 			     signo == SIGTTIN || signo == SIGTTOU)) {
 				*t = S_IGN;	/* don't hard ignore these */
@@ -370,9 +404,11 @@ setsignal(int signo)
 			*t = S_RESET;	/* force to be set */
 		}
 	}
-	if (trap_default_signo == signo && (*t == S_HARD_IGN || *t == S_IGN))
+	if (trap_default_signo == signo &&
+	    (*t == S_HARD_IGN || *t == S_IGN))
 		*t = S_RESET;
-	if (*t == S_HARD_IGN && trap_force_signo == signo && iflag)
+	if (*t == S_HARD_IGN && trap_force_signo == signo && iflag &&
+	    !tty_stopsig_preserve_ign(signo))
 		*t = S_RESET;
 	if (*t == S_HARD_IGN || *t == action)
 		return;
@@ -425,6 +461,14 @@ issigtrapped(int signo)
 {
 
 	return (trap[signo] != NULL && *trap[signo] != '\0');
+}
+
+
+int
+is_inherited_sig_ign(int signo)
+{
+
+	return (siginherited[signo] != 0);
 }
 
 
@@ -549,6 +593,7 @@ dotrap(void)
 void
 trap_init(void)
 {
+	startupiflag = iflag;
 	setsignal(SIGCHLD);
 	setsignal(SIGINT);
 	setsignal(SIGQUIT);

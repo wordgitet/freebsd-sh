@@ -41,6 +41,7 @@ int have_traps(void);
 int issigtrapped(int);
 void setsignal(int);
 void ignoresig(int);
+int is_inherited_sig_ign(int);
 int issigchldtrapped(void);
 void onsig(int);
 void dotrap(void);
