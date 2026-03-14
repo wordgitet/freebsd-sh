@@ -1255,11 +1255,17 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		}
 		n = list(0);
 		consumetoken(TRP);
-		if (suppress_bq_alias) {
-			suppressalias--;
-			suppress_bq_alias = 0;
+		if (suppress_bq_alias ||
+		    (plinno != bq_startlinno && n != NULL && n->type == NSEMI)) {
+			if (suppress_bq_alias) {
+				suppressalias--;
+				suppress_bq_alias = 0;
+			}
 			INTOFF;
-			cmdtext = commandtext(n);
+			if (plinno != bq_startlinno && n != NULL && n->type == NSEMI)
+				cmdtext = commandtextnl(n);
+			else
+				cmdtext = commandtext(n);
 			wrapper = (union node *)stalloc(sizeof(struct narg));
 			wrapper->type = NARG;
 			wrapper->narg.next = NULL;

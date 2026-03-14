@@ -952,8 +952,7 @@ forkshell(struct job *jp, union node *n, int mode)
 		} else if (mode == FORK_BG) {
 			ignoresig(SIGINT);
 			ignoresig(SIGQUIT);
-			if ((jp == NULL || jp->nprocs == 0) &&
-			    ! fd0_redirected_p ()) {
+			if (jp == NULL || jp->nprocs == 0) {
 				close(0);
 				if (open(_PATH_DEVNULL, O_RDONLY) != 0)
 					error("cannot open %s: %s",
@@ -964,8 +963,7 @@ forkshell(struct job *jp, union node *n, int mode)
 		if (mode == FORK_BG) {
 			ignoresig(SIGINT);
 			ignoresig(SIGQUIT);
-			if ((jp == NULL || jp->nprocs == 0) &&
-			    ! fd0_redirected_p ()) {
+			if (jp == NULL || jp->nprocs == 0) {
 				close(0);
 				if (open(_PATH_DEVNULL, O_RDONLY) != 0)
 					error("cannot open %s: %s",
@@ -1373,6 +1371,7 @@ backgndpidval(void)
 
 static char *cmdnextc;
 static int cmdnleft;
+static int cmdtext_newlines;
 #define MAXCMDTEXT	200
 
 char *
@@ -1380,6 +1379,20 @@ commandtext(union node *n)
 {
 	char *name;
 
+	cmdtext_newlines = 0;
+	cmdnextc = name = ckmalloc(MAXCMDTEXT);
+	cmdnleft = MAXCMDTEXT - 4;
+	cmdtxt(n);
+	*cmdnextc = '\0';
+	return name;
+}
+
+char *
+commandtextnl(union node *n)
+{
+	char *name;
+
+	cmdtext_newlines = 1;
 	cmdnextc = name = ckmalloc(MAXCMDTEXT);
 	cmdnleft = MAXCMDTEXT - 4;
 	cmdtxt(n);
@@ -1432,7 +1445,7 @@ cmdtxt(union node *n)
 	switch (n->type) {
 	case NSEMI:
 		cmdtxt(n->nbinary.ch1);
-		cmdputs("; ");
+		cmdputs(cmdtext_newlines ? "\n" : "; ");
 		cmdtxt(n->nbinary.ch2);
 		break;
 	case NAND:

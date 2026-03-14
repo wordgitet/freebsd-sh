@@ -90,6 +90,7 @@ static void evalpipe(union node *);
 static int is_valid_fast_cmdsubst(union node *n);
 static void evalcommand(union node *, int, struct backcmd *);
 static void prehash(union node *);
+static int is_shell_command(const char *);
 
 
 /*
@@ -500,7 +501,7 @@ exphere(union node *redir, struct arglist *fn)
 	forcelocal++;
 	savehandler = handler;
 	if (setjmp(jmploc.loc))
-		need_longjmp = exception != EXERROR;
+		need_longjmp = exception != 0;
 	else {
 		handler = &jmploc;
 		expandarg(redir->nhere.doc, fn, 0);
@@ -588,6 +589,8 @@ evalpipe(union node *n)
 				error("Pipe call failed: %s", strerror(errno));
 			}
 		}
+		if (prevfd < 0)
+			flushinput();
 		if (forkshell(jp, lp->n, n->npipe.backgnd) == 0) {
 			INTON;
 			if (prevfd > 0) {
@@ -836,14 +839,17 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	struct jmploc *savehandler;
 	char *savecmdname;
 	struct shparam saveparam;
+	unsigned char saveoptreset;
 	struct localvar *savelocalvars;
 	struct parsefile *savetopfile;
 	volatile int e;
 	volatile int in_redirect;
 	char *lastarg;
+	int delayed_redirect;
 	int signaled;
 	int do_clearcmdentry;
 	int had_cmdsub;
+	int delayed_assigns;
 	const char *path = pathval();
 	int i;
 
@@ -855,12 +861,18 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	jp = NULL;
 	do_clearcmdentry = 0;
 	had_cmdsub = 0;
+	delayed_assigns = 0;
+	delayed_redirect = 0;
 	oexitstatus = exitstatus;
 	exitstatus = 0;
 	/* Add one slot at the beginning for tryexec(). */
 	appendarglist(&arglist, nullstr);
 	for (argp = cmd->ncmd.args ; argp ; argp = argp->narg.next) {
 		if (varflag && isassignment(argp->narg.text)) {
+			if (varflag == 1 && argp->narg.backquote != NULL) {
+				delayed_assigns++;
+				continue;
+			}
 			expandarg(argp, varflag == 1 ? &varlist : &arglist,
 			    EXP_VARTILDE);
 			if (argp->narg.backquote != NULL) {
@@ -879,9 +891,17 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		}
 	}
 	appendarglist(&arglist, nullstr);
-	expredir(cmd->ncmd.redirect);
-	if (had_cmdsub && pendingsig)
-		dotrap();
+	if (cmd->ncmd.args == NULL) {
+		savelocalvars = localvars;
+		localvars = NULL;
+		saveoptreset = shellparam.reset;
+		forcelocal++;
+		expredir(cmd->ncmd.redirect);
+		forcelocal--;
+		poplocalvars();
+		localvars = savelocalvars;
+		shellparam.reset = saveoptreset;
+	}
 	argc = arglist.count - 2;
 	argv = &arglist.args[1];
 
@@ -997,10 +1017,52 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			cmdentry.special = 0;
 	}
 
+	if (delayed_assigns > 0 && (argc == 0 || cmdentry.special)) {
+		for (argp = cmd->ncmd.args ; argp ; argp = argp->narg.next) {
+			if (!isassignment(argp->narg.text))
+				break;
+			if (argp->narg.backquote == NULL)
+				continue;
+			expandarg(argp, &varlist, EXP_VARTILDE);
+			had_cmdsub = 1;
+			if (pendingsig)
+				dotrap();
+		}
+	}
+
+	if (cmd->ncmd.args != NULL)
+		expredir(cmd->ncmd.redirect);
+	if (delayed_assigns > 0 && argc > 0 && !cmdentry.special) {
+		if (cmd->ncmd.redirect != NULL) {
+			redirect(cmd->ncmd.redirect, REDIR_PUSH);
+			delayed_redirect = 1;
+		}
+		for (argp = cmd->ncmd.args ; argp ; argp = argp->narg.next) {
+			if (!isassignment(argp->narg.text))
+				break;
+			if (argp->narg.backquote == NULL)
+				continue;
+			expandarg(argp, &varlist, EXP_VARTILDE);
+			had_cmdsub = 1;
+			if (pendingsig)
+				dotrap();
+		}
+		if (delayed_redirect) {
+			popredir();
+			delayed_redirect = 0;
+		}
+	}
+	if (had_cmdsub && pendingsig)
+		dotrap();
+
 	if (argc > 0 && !cmdentry.special)
 		listsetvar(&varlist, VNOSET);
 
 	/* Fork off a child process if necessary. */
+	if ((cmdentry.cmdtype == CMDNORMAL || cmdentry.cmdtype == CMDUNKNOWN) &&
+	    (flags & EV_BACKCMD) == 0 && argc > 0 && is_shell_command(argv[0]))
+		flushinput();
+
 	if (((cmdentry.cmdtype == CMDNORMAL || cmdentry.cmdtype == CMDUNKNOWN)
 	    && ((flags & EV_EXIT) == 0 || have_traps()))
 	 || ((flags & EV_BACKCMD) != 0
@@ -1204,6 +1266,17 @@ out:
 		setvar("_", lastarg, 0);
 	if (do_clearcmdentry)
 		clearcmdentry();
+}
+
+static int
+is_shell_command(const char *name)
+{
+	const char *base;
+
+	base = strrchr(name, '/');
+	if (base != NULL)
+		name = base + 1;
+	return strcmp(name, "sh") == 0;
 }
 
 

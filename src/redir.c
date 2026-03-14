@@ -82,6 +82,7 @@ static unsigned int empty_redirs = 0;
 
 static void openredirect(union node *, char[10 ]);
 static int openhere(union node *);
+static void checkfdredirect(union node *);
 
 
 /*
@@ -218,6 +219,7 @@ openredirect(union node *redir, char memory[10])
 			if (memory[redir->ndup.dupfd])
 				memory[fd] = 1;
 			else {
+				checkfdredirect(redir);
 				if (dup2(redir->ndup.dupfd, fd) < 0)
 					error("%d: %s", redir->ndup.dupfd,
 							strerror(errno));
@@ -240,6 +242,25 @@ openredirect(union node *redir, char memory[10])
 			error("%d: %s", fd, strerror(e));
 		}
 		close(f);
+	}
+}
+
+static void
+checkfdredirect(union node *redir)
+{
+	int flags;
+	int accmode;
+
+	flags = fcntl(redir->ndup.dupfd, F_GETFL, 0);
+	if (flags < 0)
+		error("%d: %s", redir->ndup.dupfd, strerror(errno));
+	accmode = flags & O_ACCMODE;
+	if (redir->type == NTOFD) {
+		if (accmode == O_RDONLY)
+			error("%d: %s", redir->ndup.dupfd, strerror(EBADF));
+	} else {
+		if (accmode == O_WRONLY)
+			error("%d: %s", redir->ndup.dupfd, strerror(EBADF));
 	}
 }
 

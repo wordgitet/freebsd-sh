@@ -58,6 +58,7 @@ int stoppedjobs(void);
 int backgndpidset(void);
 pid_t backgndpidval(void);
 char *commandtext(union node *);
+char *commandtextnl(union node *);
 
 #if ! JOBS
 #define setjobctl(on)	/* do nothing */
