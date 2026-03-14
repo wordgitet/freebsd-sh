@@ -132,6 +132,7 @@ static void getusername(char *, size_t);
 static int isoverriddenkwd(const char *);
 static int isblankaliasval(const char *);
 static int cmdsubstsafe(union node *);
+static int cmdsubsthashere(union node *);
 
 
 static void *
@@ -263,6 +264,48 @@ cmdsubstsafe(union node *n)
 				return 0;
 		}
 		return 1;
+	default:
+		return 0;
+	}
+}
+
+static int
+cmdsubsthashere(union node *n)
+{
+	struct nodelist *lp;
+	union node *redir;
+
+	if (n == NULL)
+		return 0;
+
+	switch (n->type) {
+	case NSEMI:
+	case NAND:
+	case NOR:
+		return cmdsubsthashere(n->nbinary.ch1) ||
+		    cmdsubsthashere(n->nbinary.ch2);
+	case NPIPE:
+		for (lp = n->npipe.cmdlist; lp; lp = lp->next) {
+			if (cmdsubsthashere(lp->n))
+				return 1;
+		}
+		return 0;
+	case NCMD:
+		for (redir = n->ncmd.redirect; redir;
+		    redir = redir->nfile.next) {
+			if (redir->type == NHERE || redir->type == NXHERE)
+				return 1;
+		}
+		return 0;
+	case NREDIR:
+	case NBACKGND:
+	case NSUBSHELL:
+		for (redir = n->nredir.redirect; redir;
+		    redir = redir->nfile.next) {
+			if (redir->type == NHERE || redir->type == NXHERE)
+				return 1;
+		}
+		return cmdsubsthashere(n->nredir.n);
 	default:
 		return 0;
 	}
@@ -1296,6 +1339,8 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		doprompt = saveprompt;
 	} else {
 		char *cmdtext;
+		struct nodelist *orig;
+		int stash_tree;
 		union node *wrapper;
 
 		if (funclinno != 0) {
@@ -1304,6 +1349,7 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		}
 		n = list(0);
 		consumetoken(TRP);
+		stash_tree = suppress_bq_alias && cmdsubsthashere(n);
 		if (suppress_bq_alias ||
 		    (plinno != bq_startlinno && n != NULL && n->type == NSEMI &&
 		    cmdsubstsafe(n))) {
@@ -1320,6 +1366,13 @@ parsebackq(char *out, struct nodelist **pbqlist,
 			wrapper->type = NARG;
 			wrapper->narg.next = NULL;
 			wrapper->narg.backquote = NULL;
+			if (stash_tree) {
+				orig = (struct nodelist *)
+				    stalloc(sizeof(struct nodelist));
+				orig->n = n;
+				orig->next = NULL;
+				wrapper->narg.backquote = orig;
+			}
 			wrapper->narg.text = stsavestr(cmdtext);
 			ckfree(cmdtext);
 			INTON;

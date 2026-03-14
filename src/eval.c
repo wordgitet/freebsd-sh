@@ -88,6 +88,7 @@ static void exphere(union node *, struct arglist *);
 static void expredir(union node *);
 static void evalpipe(union node *);
 static int is_valid_fast_cmdsubst(union node *n);
+static union node *deferredcmdsubsttree(union node *n);
 static int is_deferred_fast_trap(const char *s);
 static void evalcommand(union node *, int, struct backcmd *);
 static void prehash(union node *);
@@ -667,6 +668,16 @@ is_valid_fast_cmdsubst(union node *n)
 	return (n->type == NCMD);
 }
 
+static union node *
+deferredcmdsubsttree(union node *n)
+{
+	if (n->type != NARG || n->narg.next != NULL ||
+	    n->narg.backquote == NULL || n->narg.backquote->next != NULL ||
+	    strstr(n->narg.text, "<<...") == NULL)
+		return NULL;
+	return n->narg.backquote->n;
+}
+
 static int
 is_deferred_fast_trap(const char *s)
 {
@@ -696,6 +707,7 @@ evalbackcmd(union node *n, struct backcmd *result)
 	struct parsefile *savefile;
 	unsigned char saveoptreset;
 	int deferred;
+	union node *deferredtree;
 	int reparsed;
 
 	result->fd = -1;
@@ -708,8 +720,9 @@ evalbackcmd(union node *n, struct backcmd *result)
 	}
 	setstackmark(&smark);
 	exitstatus = oexitstatus;
+	deferredtree = deferredcmdsubsttree(n);
 	deferred = n->type == NARG && n->narg.next == NULL &&
-	    n->narg.backquote == NULL;
+	    (n->narg.backquote == NULL || deferredtree != NULL);
 	reparsed = 0;
 	if (deferred && is_deferred_fast_trap(n->narg.text)) {
 		savelocalvars = localvars;
@@ -776,7 +789,7 @@ evalbackcmd(union node *n, struct backcmd *result)
 	} else {
 		if (pipe(pip) < 0)
 			error("Pipe call failed: %s", strerror(errno));
-		jp = makejob(n, 1);
+		jp = makejob(deferredtree != NULL ? deferredtree : n, 1);
 		if (forkshell(jp, n, FORK_NOJOB) == 0) {
 			FORCEINTON;
 			close(pip[0]);
@@ -784,7 +797,9 @@ evalbackcmd(union node *n, struct backcmd *result)
 				dup2(pip[1], 1);
 				close(pip[1]);
 			}
-			if (deferred)
+			if (deferredtree != NULL)
+				evaltree(deferredtree, EV_EXIT);
+			else if (deferred)
 				evalstring(n->narg.text, EV_EXIT);
 			else
 				evaltree(n, EV_EXIT);
