@@ -94,7 +94,6 @@ static void delete_cmd_entry(void);
 static void addcmdentry(const char *, struct cmdentry *);
 static int isreservedword(const char *);
 static char *find_path_command(const char *, const char *);
-static int is_intrinsic_builtin(const char *);
 
 
 
@@ -395,8 +394,7 @@ find_command(const char *name, struct cmdentry *entry, int act,
 	}
 
 	/* Check for builtin next */
-	if (builtin_index >= 0 &&
-	    (!shmode || builtin_special || is_intrinsic_builtin(name))) {
+	if (builtin_index >= 0) {
 		INTOFF;
 		cmdp = cmdlookup(name, 1);
 		if (cmdp->cmdtype == CMDFUNCTION)
@@ -772,41 +770,6 @@ next:
 
 	return NULL;
 }
-
-static int
-is_intrinsic_builtin(const char *name)
-{
-	static const char *const intrinsic_builtins[] = {
-		"[",
-		"alias",
-		"bg",
-		"cd",
-		"command",
-		"fc",
-		"fg",
-		"getopts",
-		"hash",
-		"jobs",
-		"kill",
-		"read",
-		"test",
-		"type",
-		"ulimit",
-		"umask",
-		"unalias",
-		"wait",
-		NULL,
-	};
-	const char *const *pp;
-
-	for (pp = intrinsic_builtins; *pp != NULL; pp++) {
-		if (equal(*pp, name))
-			return 1;
-	}
-
-	return 0;
-}
-
 
 /*
  * Shared code for the following builtin commands:
