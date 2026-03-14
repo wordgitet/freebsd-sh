@@ -522,7 +522,7 @@ dotrap(void)
 	struct stackmark smark;
 	int i;
 	int savestatus, prev_evalskip, prev_skipcount;
-	int prev_trap_saved_status, prev_trap_saved_active;
+	int prev_trap_saved_status, prev_trap_saved_active, prev_trapsig;
 
 	in_dotrap++;
 	for (;;) {
@@ -552,6 +552,7 @@ dotrap(void)
 					prev_skipcount = skipcount;
 					prev_trap_saved_status = trap_saved_status;
 					prev_trap_saved_active = trap_saved_active;
+					prev_trapsig = last_trapsig;
 					evalskip = 0;
 
 					last_trapsig = i;
@@ -563,6 +564,7 @@ dotrap(void)
 					popstackmark(&smark);
 					trap_saved_status = prev_trap_saved_status;
 					trap_saved_active = prev_trap_saved_active;
+					last_trapsig = prev_trapsig;
 
 					/*
 					 * If such a command was not
@@ -640,8 +642,12 @@ exitshell_savedstatus(void)
 	sigset_t sigs;
 
 	if (!exiting) {
-		if (trap_saved_active && rootshell)
-			exiting_exitstatus = trap_saved_status;
+		if (trap_saved_active && rootshell) {
+			if (last_trapsig != 0 && last_trapsig != SIGINT)
+				exiting_exitstatus = 384 + last_trapsig;
+			else
+				exiting_exitstatus = trap_saved_status;
+		}
 		else
 			exiting_exitstatus = oexitstatus;
 	}
@@ -650,6 +656,7 @@ exitshell_savedstatus(void)
 		handler = &loc1;
 		if ((p = trap[0]) != NULL && *p != '\0') {
 			int prev_trap_saved_status, prev_trap_saved_active;
+			int prev_trapsig;
 
 			/*
 			 * Reset evalskip, or the trap on EXIT could be
@@ -659,12 +666,15 @@ exitshell_savedstatus(void)
 			trap[0] = NULL;
 			prev_trap_saved_status = trap_saved_status;
 			prev_trap_saved_active = trap_saved_active;
+			prev_trapsig = last_trapsig;
 			trap_saved_active = 1;
 			trap_saved_status = exiting_exitstatus;
+			last_trapsig = 0;
 			FORCEINTON;
 			evalstring(p, 0);
 			trap_saved_status = prev_trap_saved_status;
 			trap_saved_active = prev_trap_saved_active;
+			last_trapsig = prev_trapsig;
 		}
 	} else if (exception != EXEXIT) {
 		exiting_exitstatus = exitstatus;

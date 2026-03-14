@@ -88,6 +88,7 @@ static void exphere(union node *, struct arglist *);
 static void expredir(union node *);
 static void evalpipe(union node *);
 static int is_valid_fast_cmdsubst(union node *n);
+static int is_deferred_fast_trap(const char *s);
 static void evalcommand(union node *, int, struct backcmd *);
 static void prehash(union node *);
 static int is_shell_command(const char *);
@@ -666,6 +667,16 @@ is_valid_fast_cmdsubst(union node *n)
 	return (n->type == NCMD);
 }
 
+static int
+is_deferred_fast_trap(const char *s)
+{
+	while (*s == ' ' || *s == '\t' || *s == '\n')
+		s++;
+	if (strcmp(s, "trap") != 0)
+		return 0;
+	return 1;
+}
+
 /*
  * Execute a command inside back quotes.  If it's a builtin command, we
  * want to save its output in a block obtained from malloc.  Otherwise
@@ -682,8 +693,10 @@ evalbackcmd(union node *n, struct backcmd *result)
 	struct jmploc jmploc;
 	struct jmploc *savehandler;
 	struct localvar *savelocalvars;
+	struct parsefile *savefile;
 	unsigned char saveoptreset;
 	int deferred;
+	int reparsed;
 
 	result->fd = -1;
 	result->buf = NULL;
@@ -697,6 +710,43 @@ evalbackcmd(union node *n, struct backcmd *result)
 	exitstatus = oexitstatus;
 	deferred = n->type == NARG && n->narg.next == NULL &&
 	    n->narg.backquote == NULL;
+	reparsed = 0;
+	if (deferred && is_deferred_fast_trap(n->narg.text)) {
+		savelocalvars = localvars;
+		localvars = NULL;
+		saveoptreset = shellparam.reset;
+		forcelocal++;
+		savehandler = handler;
+		savefile = getcurrentfile();
+		if (setjmp(jmploc.loc)) {
+			popfilesupto(savefile);
+			if (exception == EXERROR)
+				/* nothing */;
+			else if (exception != 0) {
+				handler = savehandler;
+				forcelocal--;
+				poplocalvars();
+				localvars = savelocalvars;
+				shellparam.reset = saveoptreset;
+				longjmp(handler->loc, 1);
+			}
+		} else {
+			handler = &jmploc;
+			setinputstring(n->narg.text, 1);
+			n = parsecmd(0);
+			if (n != NEOF && parsecmd(0) == NEOF &&
+			    is_valid_fast_cmdsubst(n))
+				reparsed = 1;
+			popfile();
+		}
+		handler = savehandler;
+		forcelocal--;
+		poplocalvars();
+		localvars = savelocalvars;
+		shellparam.reset = saveoptreset;
+		if (reparsed)
+			deferred = 0;
+	}
 	if (!deferred && is_valid_fast_cmdsubst(n)) {
 		savelocalvars = localvars;
 		localvars = NULL;
