@@ -154,6 +154,7 @@ readcmd(int argc __unused, char **argv __unused)
 	char **ap;
 	int backslash;
 	char c;
+	char delim;
 	int rflag;
 	char *prompt;
 	const char *ifs;
@@ -172,11 +173,15 @@ readcmd(int argc __unused, char **argv __unused)
 	struct fdctx fdctx;
 
 	rflag = 0;
+	delim = '\n';
 	prompt = NULL;
 	tv.tv_sec = -1;
 	tv.tv_usec = 0;
-	while ((i = nextopt("erp:t:")) != '\0') {
+	while ((i = nextopt("d:erp:t:")) != '\0') {
 		switch(i) {
+		case 'd':
+			delim = shoptarg[0];
+			break;
 		case 'p':
 			prompt = shoptarg;
 			break;
@@ -274,7 +279,7 @@ readcmd(int argc __unused, char **argv __unused)
 			backslash++;
 			continue;
 		}
-		if (c == '\n')
+		if (c == delim)
 			break;
 		if (strchr(ifs, c))
 			is_ifs = strchr(" \t\n", c) ? 1 : 2;
