@@ -777,6 +777,7 @@ static int
 is_intrinsic_builtin(const char *name)
 {
 	static const char *const intrinsic_builtins[] = {
+		"[",
 		"alias",
 		"bg",
 		"cd",
@@ -788,6 +789,7 @@ is_intrinsic_builtin(const char *name)
 		"jobs",
 		"kill",
 		"read",
+		"test",
 		"type",
 		"ulimit",
 		"umask",
