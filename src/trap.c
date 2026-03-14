@@ -521,6 +521,7 @@ dotrap(void)
 {
 	struct stackmark smark;
 	int i;
+	int inton;
 	int savestatus, prev_evalskip, prev_skipcount;
 	int prev_trap_saved_status, prev_trap_saved_active, prev_trapsig;
 
@@ -560,7 +561,10 @@ dotrap(void)
 					trap_saved_active = 1;
 					trap_saved_status = savestatus;
 					setstackmark(&smark);
+					inton = is_int_on();
+					FORCEINTON;
 					evalstring(stsavestr(trap[i]), 0);
+					SETINTON(inton);
 					popstackmark(&smark);
 					trap_saved_status = prev_trap_saved_status;
 					trap_saved_active = prev_trap_saved_active;
