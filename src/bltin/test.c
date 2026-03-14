@@ -22,6 +22,7 @@
 #include <err.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -173,7 +174,8 @@ static int	aexpr(enum token);
 static int	binop(enum token);
 static int	equalf(const char *, const char *);
 static int	filstat(char *, enum token);
-static int	getn(const char *);
+static int	getn_tty(const char *);
+static int	getn(const char *) __unused;
 static intmax_t	getq(const char *);
 static int	intcmp(const char *, const char *);
 static int	isunopoperand(void);
@@ -304,7 +306,7 @@ primary(enum token n)
 		case STRNZ:
 			return strlen(*++t_wp) != 0;
 		case FILTT:
-			return isatty(getn(*++t_wp));
+			return isatty(getn_tty(*++t_wp));
 		default:
 			return filstat(*++t_wp, n);
 		}
@@ -519,6 +521,29 @@ isrparenoperand(void)
 	if (nargc == 2)
 		return parenlevel == 1 && strcmp(s, ")") == 0;
 	return 0;
+}
+
+/* Parse a file descriptor for -t without treating invalid input as fatal. */
+static int
+getn_tty(const char *s)
+{
+	char *p;
+	long r;
+
+	if (*s == '\0')
+		return -1;
+
+	errno = 0;
+	r = strtol(s, &p, 10);
+	if (s == p || errno != 0)
+		return -1;
+
+	while (isspace((unsigned char)*p))
+		p++;
+	if (*p || r < 0 || r > INT_MAX)
+		return -1;
+
+	return (int)r;
 }
 
 /* atoi with error detection */
