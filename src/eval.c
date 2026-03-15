@@ -672,8 +672,7 @@ static union node *
 deferredcmdsubsttree(union node *n)
 {
 	if (n->type != NARG || n->narg.next != NULL ||
-	    n->narg.backquote == NULL || n->narg.backquote->next != NULL ||
-	    strstr(n->narg.text, "<<...") == NULL)
+	    n->narg.backquote == NULL || n->narg.backquote->next != NULL)
 		return NULL;
 	return n->narg.backquote->n;
 }

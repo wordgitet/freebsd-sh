@@ -131,8 +131,9 @@ static int pgetc_linecont(void);
 static void getusername(char *, size_t);
 static int isoverriddenkwd(const char *);
 static int isblankaliasval(const char *);
-static int cmdsubstsafe(union node *);
+static int cmdsubstsafe(union node *, int *);
 static int cmdsubsthashere(union node *);
+static int cmdsubstargtextlossy(const char *);
 
 
 static void *
@@ -233,7 +234,7 @@ cmdsubstargtextsafe(const char *text)
 }
 
 static int
-cmdsubstsafe(union node *n)
+cmdsubstsafe(union node *n, int *lossy)
 {
 	struct nodelist *lp;
 	union node *arg;
@@ -245,8 +246,8 @@ cmdsubstsafe(union node *n)
 	case NSEMI:
 	case NAND:
 	case NOR:
-		return cmdsubstsafe(n->nbinary.ch1) &&
-		    cmdsubstsafe(n->nbinary.ch2);
+		return cmdsubstsafe(n->nbinary.ch1, lossy) &&
+		    cmdsubstsafe(n->nbinary.ch2, lossy);
 	case NCMD:
 		if (n->ncmd.redirect != NULL)
 			return 0;
@@ -254,19 +255,49 @@ cmdsubstsafe(union node *n)
 			if (arg->type != NARG || arg->narg.backquote != NULL ||
 			    !cmdsubstargtextsafe(arg->narg.text))
 				return 0;
+			if (cmdsubstargtextlossy(arg->narg.text))
+				*lossy = 1;
 		}
 		return 1;
 	case NPIPE:
 		if (n->npipe.backgnd)
 			return 0;
 		for (lp = n->npipe.cmdlist; lp; lp = lp->next) {
-			if (!cmdsubstsafe(lp->n))
+			if (!cmdsubstsafe(lp->n, lossy))
 				return 0;
 		}
 		return 1;
 	default:
 		return 0;
 	}
+}
+
+static int
+cmdsubstargtextlossy(const char *text)
+{
+	char c;
+
+	while ((c = *text++) != '\0') {
+		switch (c) {
+		case ' ':
+		case '\t':
+		case '\n':
+		case '&':
+		case ';':
+		case '(':
+		case ')':
+		case '<':
+		case '>':
+		case '|':
+		case '\\':
+		case '"':
+		case '\'':
+		case '`':
+		case '$':
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static int
@@ -1340,6 +1371,7 @@ parsebackq(char *out, struct nodelist **pbqlist,
 	} else {
 		char *cmdtext;
 		struct nodelist *orig;
+		int lossy;
 		int stash_tree;
 		union node *wrapper;
 
@@ -1349,14 +1381,17 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		}
 		n = list(0);
 		consumetoken(TRP);
-		stash_tree = suppress_bq_alias && cmdsubsthashere(n);
+		lossy = 0;
+		stash_tree = 0;
 		if (suppress_bq_alias ||
 		    (plinno != bq_startlinno && n != NULL && n->type == NSEMI &&
-		    cmdsubstsafe(n))) {
+		    cmdsubstsafe(n, &lossy))) {
 			if (suppress_bq_alias) {
 				suppressalias--;
 				suppress_bq_alias = 0;
 			}
+			if (cmdsubsthashere(n) || lossy)
+				stash_tree = 1;
 			INTOFF;
 			if (plinno != bq_startlinno && n != NULL && n->type == NSEMI)
 				cmdtext = commandtextnl(n);
