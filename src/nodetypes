@@ -108,6 +108,7 @@ NARG narg			# represents a word
 	next	  nodeptr		# next word in list
 	text	  string		# the text of the word
 	backquote nodelist		# list of commands in back quotes
+	simple	  int			# if set, no expansion required
 
 NTO nfile			# fd> fname
 NFROM nfile			# fd< fname

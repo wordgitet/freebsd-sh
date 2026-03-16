@@ -200,7 +200,7 @@ evaltree(union node *n, int flags)
 		exitstatus = 0;
 		goto out;
 	}
-	do {
+	for (;;) {
 		next = NULL;
 #ifndef NO_HISTORY
 		displayhist = 1;	/* show history substitutions done with fc */
@@ -297,9 +297,11 @@ evaltree(union node *n, int flags)
 			break;
 		}
 		n = next;
+		if (n == NULL)
+			break;
 		popstackmark(&smark);
 		setstackmark(&smark);
-	} while (n != NULL);
+	}
 out:
 	popstackmark(&smark);
 	if (pendingsig)
@@ -359,7 +361,10 @@ evalfor(union node *n, int flags)
 	emptyarglist(&arglist);
 	for (argp = n->nfor.args ; argp ; argp = argp->narg.next) {
 		oexitstatus = exitstatus;
-		expandarg(argp, &arglist, EXP_FULL | EXP_TILDE);
+		if (argp->narg.simple)
+			appendarglist(&arglist, argp->narg.text);
+		else
+			expandarg(argp, &arglist, EXP_FULL | EXP_TILDE);
 	}
 
 	loopnest++;
@@ -398,7 +403,10 @@ evalcase(union node *n)
 
 	emptyarglist(&arglist);
 	oexitstatus = exitstatus;
-	expandarg(n->ncase.expr, &arglist, EXP_TILDE);
+	if (n->ncase.expr->narg.simple)
+		appendarglist(&arglist, n->ncase.expr->narg.text);
+	else
+		expandarg(n->ncase.expr, &arglist, EXP_TILDE);
 	for (cp = n->ncase.cases ; cp ; cp = cp->nclist.next) {
 		for (patp = cp->nclist.pattern ; patp ; patp = patp->narg.next) {
 			if (casematch(patp, arglist.args[0])) {
@@ -540,14 +548,22 @@ expredir(union node *n)
 		case NFROMTO:
 		case NAPPEND:
 		case NCLOBBER:
-			expandarg(redir->nfile.fname, &fn, EXP_TILDE);
-			redir->nfile.expfname = fn.args[0];
+			if (redir->nfile.fname->narg.simple)
+				redir->nfile.expfname = redir->nfile.fname->narg.text;
+			else {
+				expandarg(redir->nfile.fname, &fn, EXP_TILDE);
+				redir->nfile.expfname = fn.args[0];
+			}
 			break;
 		case NFROMFD:
 		case NTOFD:
 			if (redir->ndup.vname) {
-				expandarg(redir->ndup.vname, &fn, EXP_TILDE);
-				fixredir(redir, fn.args[0], 1);
+				if (redir->ndup.vname->narg.simple)
+					fixredir(redir, redir->ndup.vname->narg.text, 1);
+				else {
+					expandarg(redir->ndup.vname, &fn, EXP_TILDE);
+					fixredir(redir, fn.args[0], 1);
+				}
 			}
 			break;
 		case NXHERE:
@@ -973,8 +989,12 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 				delayed_assigns++;
 				continue;
 			}
-			expandarg(argp, varflag == 1 ? &varlist : &arglist,
-			    EXP_VARTILDE);
+			if (argp->narg.simple)
+				appendarglist(varflag == 1 ? &varlist : &arglist,
+				    argp->narg.text);
+			else
+				expandarg(argp, varflag == 1 ? &varlist : &arglist,
+				    EXP_VARTILDE);
 			if (argp->narg.backquote != NULL) {
 				had_cmdsub = 1;
 				if (pendingsig)
@@ -983,7 +1003,10 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			continue;
 		} else if (varflag == 1)
 			varflag = isdeclarationcmd(&argp->narg) ? 2 : 0;
-		expandarg(argp, &arglist, EXP_FULL | EXP_TILDE);
+		if (argp->narg.simple)
+			appendarglist(&arglist, argp->narg.text);
+		else
+			expandarg(argp, &arglist, EXP_FULL | EXP_TILDE);
 		if (argp->narg.backquote != NULL) {
 			had_cmdsub = 1;
 			if (pendingsig)

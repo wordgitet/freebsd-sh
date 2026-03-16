@@ -13,8 +13,7 @@ project(
 
 cc = meson.get_compiler('c')
 
-add_project_arguments(['-D_GNU_SOURCE', '-D_FILE_OFFSET_BITS=64', '-Dlint'],
-    language: 'c')
+add_project_arguments(['-D_GNU_SOURCE', '-D_FILE_OFFSET_BITS=64'], language: 'c')
 add_project_arguments('-Wno-unused-result', language: 'c')
 
 if cc.has_argument('-Wstring-plus-int')

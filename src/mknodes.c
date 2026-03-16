@@ -343,6 +343,14 @@ outfunc(FILE *cfile, int calcsize)
 				}
 				break;
 			case T_INT:
+				if (calcsize) {
+					/* nothing to do for int */
+				} else {
+					indent(12, cfile);
+					fprintf(cfile, "new->%s.%s = n->%s.%s;\n",
+						sp->tag, fp->name, sp->tag, fp->name);
+				}
+				break;
 			case T_OTHER:
 				if (! calcsize) {
 					indent(12, cfile);

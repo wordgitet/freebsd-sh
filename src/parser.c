@@ -654,6 +654,7 @@ command(void)
 			n2->narg.text = argvars;
 			n2->narg.backquote = NULL;
 			n2->narg.next = NULL;
+			n2->narg.simple = 0;
 			n1->nfor.args = n2;
 			/*
 			 * Newline or semicolon here is optional (but note
@@ -866,6 +867,14 @@ simplecmd(union node **rpp, union node *redir)
 	return n;
 }
 
+static const char simple_chars[] = {
+	CTLESC, CTLVAR, CTLENDVAR, CTLBACKQ, CTLBACKQ | CTLQUOTE,
+	CTLARI, CTLENDARI, CTLQUOTEMARK, CTLQUOTEEND,
+	'~', '*', '?', '[', ' ', '\t', '\n',
+	'\301', '\371', '\372', '\373', '\374', '\375', '\376', '\377',
+	'\0'
+};
+
 static union node *
 makename(void)
 {
@@ -876,6 +885,8 @@ makename(void)
 	n->narg.next = NULL;
 	n->narg.text = wordtext;
 	n->narg.backquote = backquotelist;
+	n->narg.simple = (backquotelist == NULL &&
+	    strpbrk(wordtext, simple_chars) == NULL);
 	return n;
 }
 
@@ -913,11 +924,11 @@ fixredir(union node *n, const char *text, int err)
 
 		if (err)
 			synerror("Bad fd number");
-		else
+		else {
 			n->ndup.vname = makename();
+		}
 	}
 }
-
 
 static void
 parsefname(void)
@@ -1401,6 +1412,7 @@ parsebackq(char *out, struct nodelist **pbqlist,
 			wrapper->type = NARG;
 			wrapper->narg.next = NULL;
 			wrapper->narg.backquote = NULL;
+			wrapper->narg.simple = 0;
 			if (stash_tree) {
 				orig = (struct nodelist *)
 				    stalloc(sizeof(struct nodelist));
