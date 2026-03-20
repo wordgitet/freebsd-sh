@@ -1293,7 +1293,8 @@ dowait(int mode, struct job *job)
 	INTON;
 	if (!thisjob || thisjob->state == 0)
 		;
-	else if ((((iflag && !rootshell) || thisjob == job)) &&
+	else if (((iflag && (!rootshell || thisjob == job)) ||
+	    (!iflag && !rootshell && thisjob == job)) &&
 	    thisjob->foreground && thisjob->state != JOBSTOPPED) {
 		sig = 0;
 		coredump = 0;
@@ -1302,7 +1303,8 @@ dowait(int mode, struct job *job)
 				sig = WTERMSIG(sp->status);
 				coredump = WCOREDUMP(sp->status);
 			}
-		if (sig > 0 && sig != SIGINT && sig != SIGPIPE) {
+		if (sig > 0 && sig != SIGINT && sig != SIGPIPE &&
+		    !(sig == SIGHUP && !iflag)) {
 			sigstr = strsignal(sig);
 			if (sigstr != NULL)
 				out2str(sigstr);
