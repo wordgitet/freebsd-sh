@@ -87,7 +87,17 @@ for test_rel in $TEST_LIST; do
     actual_status=0
     (
         cd "$workdir"
-        SH="$TESTEE" TESTEE="$TESTEE" LC_ALL=C LANG=C \
+        env \
+            -u LANGUAGE \
+            -u LANG \
+            -u LC_ALL \
+            -u LC_COLLATE \
+            -u LC_CTYPE \
+            -u LC_MESSAGES \
+            -u LC_MONETARY \
+            -u LC_NUMERIC \
+            -u LC_TIME \
+            SH="$TESTEE" TESTEE="$TESTEE" LC_ALL=C LANG=C \
             timeout "$TIMEOUT" "$TESTEE" "$test_path"
     ) >"$stdout_file" 2>"$stderr_file" || actual_status=$?
 
