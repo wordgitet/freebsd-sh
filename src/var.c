@@ -669,6 +669,10 @@ exportcmd(int argc __unused, char **argv)
 		for (ap = argptr; (name = *ap) != NULL; ap++) {
 			if ((p = strchr(name, '=')) != NULL) {
 				p++;
+				vp = find_var(name, NULL, NULL);
+				if (vp != NULL && (vp->flags & VREADONLY))
+					errorwithstatus(1, "%.*s: is read only",
+					    vp->name_len, vp->text);
 			} else {
 				vp = find_var(name, NULL, NULL);
 				if (vp != NULL) {
