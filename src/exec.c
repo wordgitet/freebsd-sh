@@ -93,7 +93,7 @@ static struct tblentry *cmdlookup(const char *, int);
 static void delete_cmd_entry(void);
 static void addcmdentry(const char *, struct cmdentry *);
 static int isreservedword(const char *);
-static int is_intrinsic_builtin(const char *);
+static int is_intrinsic_builtin(int);
 static char *find_path_command(const char *, const char *);
 
 
@@ -349,39 +349,32 @@ printentry(struct tblentry *cmdp, int verbose)
 }
 
 static int
-is_intrinsic_builtin(const char *name)
+is_intrinsic_builtin(int idx)
 {
-	static const char *const intrinsic_builtins[] = {
-		"alias",
-		"bg",
-		"builtin",
-		"cd",
-		"command",
-		"fc",
-		"fg",
-		"getopts",
-		"hash",
-		"jobs",
-		"kill",
-		"local",
-		"read",
-		"test",
-		"type",
-		"ulimit",
-		"umask",
-		"unalias",
-		"wait",
-		"[",
-		NULL,
-	};
-	const char *const *pp;
-
-	for (pp = intrinsic_builtins; *pp != NULL; pp++) {
-		if (equal(*pp, name))
-			return 1;
+	switch (idx) {
+	case ALIASCMD:
+	case BGCMD:
+	case BLTINCMD:
+	case CDCMD:
+	case COMMANDCMD:
+	case HISTCMD:
+	case FGCMD:
+	case GETOPTSCMD:
+	case HASHCMD:
+	case JOBSCMD:
+	case KILLCMD:
+	case LOCALCMD:
+	case READCMD:
+	case TESTCMD:
+	case TYPECMD:
+	case ULIMITCMD:
+	case UMASKCMD:
+	case UNALIASCMD:
+	case WAITCMD:
+		return 1;
+	default:
+		return 0;
 	}
-
-	return 0;
 }
 
 
@@ -403,6 +396,7 @@ find_command(const char *name, struct cmdentry *entry, int act,
 	int e;
 	int builtin_index;
 	int builtin_special;
+	int builtin_resolved;
 	int cd;
 	int strict_sh_lookup;
 
@@ -415,7 +409,9 @@ find_command(const char *name, struct cmdentry *entry, int act,
 	}
 
 	cd = 0;
-	builtin_index = find_builtin(name, &builtin_special);
+	builtin_index = -1;
+	builtin_special = 0;
+	builtin_resolved = 0;
 	strict_sh_lookup = shmode &&
 	    (((act & DO_NOBLTIN) != 0) || path[0] == '\0');
 
@@ -424,23 +420,34 @@ find_command(const char *name, struct cmdentry *entry, int act,
 		if (cmdp->cmdtype == CMDFUNCTION) {
 			if (act & DO_NOFUNC)
 				cmdp = NULL;
-			else if (shmode && builtin_index >= 0 &&
-			    builtin_special)
-				cmdp = NULL;
-			else
+			else if (shmode) {
+				if (!builtin_resolved) {
+					builtin_index = find_builtin(name,
+					    &builtin_special);
+					builtin_resolved = 1;
+				}
+				if (builtin_index >= 0 && builtin_special)
+					cmdp = NULL;
+				else
+					goto success;
+			} else
 				goto success;
 		} else if (cmdp->cmdtype == CMDBUILTIN &&
 		    strict_sh_lookup && !cmdp->special &&
-		    !is_intrinsic_builtin(name)) {
+		    !is_intrinsic_builtin(cmdp->param.index)) {
 			cmdp = NULL;
 		} else
 			goto success;
 	}
 
 	/* Check for builtin next */
+	if (!builtin_resolved) {
+		builtin_index = find_builtin(name, &builtin_special);
+		builtin_resolved = 1;
+	}
 	if (builtin_index >= 0 &&
 	    (!strict_sh_lookup || builtin_special ||
-	    is_intrinsic_builtin(name))) {
+	    is_intrinsic_builtin(builtin_index))) {
 		INTOFF;
 		cmdp = cmdlookup(name, 1);
 		if (cmdp->cmdtype == CMDFUNCTION)
