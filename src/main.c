@@ -313,6 +313,7 @@ dotcmd(int argc, char **argv)
 	union node *n;
 	char *filename, *fullname;
 	int any;
+	int fd, fd2, e;
 
 	if (argc < 2)
 		error("missing filename");
@@ -324,7 +325,26 @@ dotcmd(int argc, char **argv)
 	filename = argc > 2 && strcmp(argv[1], "--") == 0 ? argv[2] : argv[1];
 
 	fullname = find_dot_file(filename);
-	setinputfile(fullname, 1, -1 /* verify */);
+	INTOFF;
+	fd = open(fullname, O_RDONLY | O_CLOEXEC);
+	if (fd < 0) {
+		e = errno;
+		INTON;
+		if (e == ENOENT || e == ENOTDIR)
+			errorwithstatus(1, "%s: not found", filename);
+		errorwithstatus(126, "%s: %s", filename, strerror(e));
+	}
+	if (fd < 10) {
+		fd2 = fcntl(fd, F_DUPFD_CLOEXEC, 10);
+		close(fd);
+		if (fd2 < 0) {
+			INTON;
+			error("Out of file descriptors");
+		}
+		fd = fd2;
+	}
+	setinputfd(fd, 1);
+	INTON;
 	commandname = fullname;
 	any = 0;
 	setstackmark(&smark);
