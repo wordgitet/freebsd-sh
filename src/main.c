@@ -293,7 +293,8 @@ find_dot_file(char *basename)
 		return basename;
 
 	while ((fullname = padvance(&path, &opt, basename)) != NULL) {
-		if ((stat(fullname, &statb) == 0) && S_ISREG(statb.st_mode)) {
+		if ((stat(fullname, &statb) == 0) && S_ISREG(statb.st_mode) &&
+		    access(fullname, R_OK) == 0) {
 			/*
 			 * Don't bother freeing here, since it will
 			 * be freed by the caller.

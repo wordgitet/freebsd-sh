@@ -1015,7 +1015,7 @@ forkshell(struct job *jp, union node *n, int mode)
 		ps->pid = pid;
 		ps->status = -1;
 		ps->cmd = nullstr;
-		if (jobctl && n)
+		if (n)
 			ps->cmd = commandtext(n);
 		jp->foreground = mode == FORK_FG;
 #if JOBS
@@ -1104,15 +1104,18 @@ waitforjob(struct job *jp, int *signaled)
 #if JOBS
 	int propagate_int = jp->jobctl && jp->foreground;
 #endif
+	ptrdiff_t jobno;
 	int status;
 	int st;
 
 	INTOFF;
+	jobno = jp - jobtab;
 	TRACE(("waitforjob(%%%td) called\n", jp - jobtab + 1));
-	while (jp->state == 0)
+	while ((jp = jobtab + jobno)->state == 0)
 		if (dowait(DOWAIT_BLOCK | (Tflag ? DOWAIT_SIG |
 		    DOWAIT_SIG_TRAP : 0), jp) == -1)
 			dotrap();
+	jp = jobtab + jobno;
 #if JOBS
 	if (jp->jobctl) {
 		if (ttyfd >= 0 && xtcsetpgrp(ttyfd, rootpid) < 0)

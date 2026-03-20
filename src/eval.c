@@ -446,6 +446,7 @@ evalsubshell(union node *n, int flags)
 		if (backgnd)
 			flags &=~ EV_TESTED;
 		redirect(n->nredir.redirect, 0);
+		loopnest = 0;
 		evaltree(n->nredir.n, flags | EV_EXIT);	/* never returns */
 	} else if (! backgnd) {
 		INTOFF;
