@@ -225,8 +225,21 @@ isblankaliasval(const char *val)
 static int
 cmdsubstargtextsafe(const char *text)
 {
+	unsigned char c;
+
 	while (*text != '\0') {
-		if (BASESYNTAX[(unsigned char)*text] == CCTL)
+		c = (unsigned char)*text;
+		if (c == (unsigned char)CTLESC ||
+		    c == (unsigned char)CTLVAR ||
+		    c == (unsigned char)CTLENDVAR ||
+		    c == (unsigned char)CTLBACKQ ||
+		    c == (unsigned char)(CTLBACKQ | CTLQUOTE) ||
+		    c == (unsigned char)CTLARI ||
+		    c == (unsigned char)CTLENDARI ||
+		    c == (unsigned char)CTLQUOTEMARK ||
+		    c == (unsigned char)CTLQUOTEEND)
+			return 0;
+		if (BASESYNTAX[c] == CCTL)
 			return 0;
 		text++;
 	}
@@ -1403,7 +1416,6 @@ parsebackq(char *out, struct nodelist **pbqlist,
 				safe = cmdsubstsafe(n, &lossy);
 				suppressalias--;
 				suppress_bq_alias = 0;
-				stash_tree = 1;
 			}
 			if (!safe || cmdsubsthashere(n) || lossy)
 				stash_tree = 1;
