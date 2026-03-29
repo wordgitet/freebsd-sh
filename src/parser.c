@@ -1383,6 +1383,7 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		char *cmdtext;
 		struct nodelist *orig;
 		int lossy;
+		int safe;
 		int stash_tree;
 		union node *wrapper;
 
@@ -1393,15 +1394,18 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		n = list(0);
 		consumetoken(TRP);
 		lossy = 0;
+		safe = 1;
 		stash_tree = 0;
 		if (suppress_bq_alias ||
 		    (plinno != bq_startlinno && n != NULL && n->type == NSEMI &&
 		    cmdsubstsafe(n, &lossy))) {
 			if (suppress_bq_alias) {
+				safe = cmdsubstsafe(n, &lossy);
 				suppressalias--;
 				suppress_bq_alias = 0;
+				stash_tree = 1;
 			}
-			if (cmdsubsthashere(n) || lossy)
+			if (!safe || cmdsubsthashere(n) || lossy)
 				stash_tree = 1;
 			INTOFF;
 			if (plinno != bq_startlinno && n != NULL && n->type == NSEMI)

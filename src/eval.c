@@ -740,7 +740,7 @@ evalbackcmd(union node *n, struct backcmd *result)
 	deferred = n->type == NARG && n->narg.next == NULL &&
 	    (n->narg.backquote == NULL || deferredtree != NULL);
 	reparsed = 0;
-	if (deferred && is_deferred_fast_trap(n->narg.text)) {
+	if (deferred && deferredtree == NULL && is_deferred_fast_trap(n->narg.text)) {
 		savelocalvars = localvars;
 		localvars = NULL;
 		saveoptreset = shellparam.reset;
@@ -776,6 +776,8 @@ evalbackcmd(union node *n, struct backcmd *result)
 		if (reparsed)
 			deferred = 0;
 	}
+	if (deferred && deferredtree != NULL)
+		deferred = 0;
 	if (!deferred && is_valid_fast_cmdsubst(n)) {
 		savelocalvars = localvars;
 		localvars = NULL;
