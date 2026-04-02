@@ -339,9 +339,9 @@ backslash:	  putc('\\', tracefile);
 				putc(*p, tracefile);
 			else {
 				putc('\\', tracefile);
-				putc(*p >> 6 & 03, tracefile);
-				putc(*p >> 3 & 07, tracefile);
-				putc(*p & 07, tracefile);
+				putc((*p >> 6 & 03) + '0', tracefile);
+				putc((*p >> 3 & 07) + '0', tracefile);
+				putc((*p & 07) + '0', tracefile);
 			}
 			break;
 		}
