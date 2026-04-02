@@ -1508,6 +1508,7 @@ void
 rmescapes(char *str)
 {
 	char *p, *q;
+	int len;
 
 	p = str;
 	while (*p != CTLESC && *p != CTLQUOTEMARK && *p != CTLQUOTEEND) {
@@ -1522,6 +1523,15 @@ rmescapes(char *str)
 		}
 		if (*p == CTLESC)
 			p++;
+		if (localeisutf8 && (unsigned char)*p > 127) {
+			len = mbtowc(NULL, p, 4);
+			if (len > 1) {
+				memmove(q, p, len);
+				q += len;
+				p += len;
+				continue;
+			}
+		}
 		*q++ = *p++;
 	}
 	*q = '\0';
