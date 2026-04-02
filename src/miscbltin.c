@@ -413,6 +413,8 @@ umaskcmd(int argc __unused, char **argv __unused)
 				if (*ap >= '8' || *ap < '0')
 					error("Illegal number: %s", *argptr);
 				mask = (mask << 3) + (*ap - '0');
+				if (mask > 0777)
+					error("Illegal number: %s", *argptr);
 			} while (*++ap != '\0');
 			umask(mask);
 		} else {
