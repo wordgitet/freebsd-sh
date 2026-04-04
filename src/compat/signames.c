@@ -112,7 +112,7 @@ static int rtsig_to_signum(const char *sig)
 		sig += 4;
 		maxi = 1;
 	}
-	if (!isdigit(*sig))
+	if (!isdigit((unsigned char)*sig))
 		return -1;
 	errno = 0;
 	num = strtol(sig, &ep, 10);

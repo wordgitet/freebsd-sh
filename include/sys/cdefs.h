@@ -30,7 +30,7 @@
 
 #include <features.h>
 
-#ifdef __GLIBC__
+#if defined(__GLIBC__) || defined(__CYGWIN__)
 # include_next <sys/cdefs.h>
 #else
 # ifdef  __cplusplus
@@ -42,16 +42,36 @@
 # endif
 #endif
 
+#ifndef __COPYRIGHT
 #define __COPYRIGHT(x)
+#endif
+#ifndef __FBSDID
 #define __FBSDID(x)
+#endif
+#ifndef __SCCSID
 #define __SCCSID(x)
+#endif
+#ifndef __RCSID
 #define __RCSID(x)
+#endif
 
+#ifndef __dead2
 #define __dead2
+#endif
+#ifndef __printf0like
 #define __printf0like(x, y)
+#endif
+#ifndef __printflike
 #define __printflike(x, y) __attribute__((format(printf, x, y)))
+#endif
+#ifndef __DECONST
 #define __DECONST(a, v) ((a)(v))
+#endif
+#ifndef __unused
 #define __unused __attribute__((unused))
+#endif
+#ifndef __unreachable
 #define __unreachable() __builtin_unreachable()
+#endif
 
 #endif

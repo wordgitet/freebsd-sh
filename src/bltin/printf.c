@@ -269,7 +269,7 @@ printf_doformat(char *fmt, int *rval)
 		havewidth = 0;
 
 		/* skip to possible '.', get following precision */
-		while (isdigit(*fmt)) {
+		while (isdigit((unsigned char)*fmt)) {
 			*dptr++ = *fmt++;
 			*dptr = 0;
 		}
@@ -312,7 +312,7 @@ printf_doformat(char *fmt, int *rval)
 			haveprec = 0;
 
 			/* skip to conversion char */
-			while (isdigit(*fmt)) {
+			while (isdigit((unsigned char)*fmt)) {
 				*dptr++ = *fmt++;
 				*dptr = 0;
 			}
@@ -548,7 +548,7 @@ unescape(const char *str, bool *skipesc)
 			/* anything printable not covered above is not special
 			 * to the shell and can just go in the string verbatim
 			 */
-			if (isprint(*str)) {
+			if (isprint((unsigned char)*str)) {
 				p[-1] = *str++;
 				continue;
 			}

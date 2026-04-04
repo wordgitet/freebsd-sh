@@ -112,7 +112,7 @@ _gettemp(int dfd, char *path, int *doopen, int domkdir, int oflags)
 			struct timespec ts;
 			uint64_t seed;
 			clock_gettime(CLOCK_REALTIME, &ts);
-			seed = ts.tv_sec + ts.tv_nsec + gettid() * 65537UL - 1;
+			seed = ts.tv_sec + ts.tv_nsec + getpid() * 65537UL - 1;
 			for (char *buf = bx; buf < suffp; buf += sizeof(seed)) {
 				size_t left = (suffp - buf);
 				seed = 6364136223846793005ULL * seed + 1;

@@ -71,7 +71,7 @@ main(int argc, char *argv[])
 		if (argc > 1)
 			usage();
 		if (argc == 1) {
-			if (isdigit(**argv)) {
+			if (isdigit((unsigned char)**argv)) {
 				numsig = strtol(*argv, &ep, 10);
 				if (!**argv || *ep)
 					errx(2, "invalid signal number: %s", *argv);
@@ -112,10 +112,10 @@ main(int argc, char *argv[])
 		argc--, argv++;
 	} else if (**argv == '-' && *(*argv + 1) != '-') {
 		++*argv;
-		if (isalpha(**argv)) {
+		if (isalpha((unsigned char)**argv)) {
 			if ((numsig = signame_to_signum(*argv)) < 0)
 				nosig(*argv);
-		} else if (isdigit(**argv)) {
+		} else if (isdigit((unsigned char)**argv)) {
 			numsig = strtol(*argv, &ep, 10);
 			if (!**argv || *ep)
 				errx(2, "illegal signal number: %s", *argv);
