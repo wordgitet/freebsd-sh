@@ -63,7 +63,9 @@
 #define MEM_OUT -2		/* output to dynamically allocated memory */
 #define OUTPUT_ERR 01		/* error occurred on output */
 
+#ifndef __APPLE__
 static ssize_t doformat_wr(void *, const char *, size_t);
+#endif
 
 struct output output = {NULL, NULL, NULL, OUTBUFSIZ, 1, 0};
 struct output errout = {NULL, NULL, NULL, 256, 2, 0};
@@ -310,6 +312,18 @@ fmtstr(char *outbuf, int length, const char *fmt, ...)
 	INTON;
 }
 
+#ifdef __APPLE__
+static int
+doformat_wr_apple(void *cookie, const char *buf, int len)
+{
+	struct output *o;
+
+	o = (struct output *)cookie;
+	outbin(buf, len, o);
+
+	return (len);
+}
+#else
 static ssize_t
 doformat_wr(void *cookie, const char *buf, size_t len)
 {
@@ -327,13 +341,18 @@ static cookie_io_functions_t func = {
     .seek = NULL,
     .close = NULL
 };
+#endif
 
 void
 doformat(struct output *dest, const char *f, va_list ap)
 {
 	FILE *fp;
 
+#ifdef __APPLE__
+	if ((fp = funopen(dest, NULL, doformat_wr_apple, NULL, NULL)) != NULL) {
+#else
 	if ((fp = fopencookie(dest, "a", func)) != NULL) {
+#endif
 		vfprintf(fp, f, ap);
 		fclose(fp);
 	}
@@ -342,7 +361,11 @@ doformat(struct output *dest, const char *f, va_list ap)
 FILE *
 out1fp(void)
 {
+#ifdef __APPLE__
+	return funopen(out1, NULL, doformat_wr_apple, NULL, NULL);
+#else
 	return fopencookie(out1, "a", func);
+#endif
 }
 
 /*

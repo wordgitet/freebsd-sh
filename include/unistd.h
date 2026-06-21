@@ -31,6 +31,11 @@
 #include_next <unistd.h>
 #include <sys/stat.h>
 
+#ifdef __APPLE__
+#include <fcntl.h>
+#define eaccess(path, mode) faccessat(AT_FDCWD, (path), (mode), AT_EACCESS)
+#endif
+
 mode_t getmode(const void *, mode_t);
 void *setmode(const char *);
 

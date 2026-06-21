@@ -43,6 +43,20 @@
 #include <unistd.h>
 #include <time.h>
 
+#ifndef O_DIRECT
+#define O_DIRECT 0
+#endif
+
+#ifdef __APPLE__
+#ifndef GRND_NONBLOCK
+#define GRND_NONBLOCK 0
+#endif
+static inline ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
+    (void)flags;
+    return getentropy(buf, buflen);
+}
+#endif
+
 char *_mktemp(char *);
 
 static int _gettemp(int, char *, int *, int, int);

@@ -120,10 +120,17 @@ histsave(void)
 		INTON;
 		return;
 	}
+#ifdef H_SAVE_FP
 	if (history(hist, &he, H_SAVE_FP, f) < 1 ||
 	    rename(histtmpname, histfile) == -1)
 		unlink(histtmpname);
 	fclose(f);
+#else
+	fclose(f);
+	if (history(hist, &he, H_SAVE, histtmpname) == -1 ||
+	    rename(histtmpname, histfile) == -1)
+		unlink(histtmpname);
+#endif
 	free(histtmpname);
 	INTON;
 

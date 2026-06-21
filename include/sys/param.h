@@ -57,4 +57,12 @@
 #define roundup2(x, y)  (((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
 #define nitems(x) (sizeof((x)) / sizeof((x)[0]))
 
+#ifndef LOGIN_NAME_MAX
+# ifdef MAXLOGNAME
+#  define LOGIN_NAME_MAX MAXLOGNAME
+# else
+#  define LOGIN_NAME_MAX 32
+# endif
+#endif
+
 #endif

@@ -28,11 +28,25 @@
 #ifndef SYS_CDEFS_H
 #define SYS_CDEFS_H
 
-#include <features.h>
+#if defined(__has_include)
+# if __has_include(<features.h>)
+#  include <features.h>
+# endif
+#endif
 
-#if defined(__GLIBC__) || defined(__CYGWIN__)
+#if defined(__has_include_next)
+# if __has_include_next(<sys/cdefs.h>)
+#  include_next <sys/cdefs.h>
+# else
+#  define _SYS_CDEFS_COMPAT
+# endif
+#elif defined(__GLIBC__) || defined(__CYGWIN__) || defined(__APPLE__)
 # include_next <sys/cdefs.h>
 #else
+# define _SYS_CDEFS_COMPAT
+#endif
+
+#ifdef _SYS_CDEFS_COMPAT
 # ifdef  __cplusplus
 #  define __BEGIN_DECLS extern "C" {
 #  define __END_DECLS }

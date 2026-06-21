@@ -38,7 +38,9 @@
 extern "C" {
 #endif
 
+#if !defined(__APPLE__)
 void strmode(mode_t, char *);
+#endif
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *d, const char *s, size_t n);
 #endif

@@ -4,7 +4,7 @@
 YASH ?= $(shell command -v yash 2>/dev/null)
 TESTEE ?= ../../build/src/sh
 TIMEOUT ?= 160s
-TIMEOUT_CMD ?= timeout $(TIMEOUT)
+TIMEOUT_CMD ?= $(shell command -v timeout >/dev/null 2>&1 && echo "timeout $(TIMEOUT)" || (command -v gtimeout >/dev/null 2>&1 && echo "gtimeout $(TIMEOUT)" || echo ""))
 CC ?= cc
 CFLAGS ?= -O2
 CPPFLAGS ?=
@@ -70,7 +70,7 @@ test-posix-nosignal:
 
 test-report: check-yash check-testee
 	rm -rf $(RECHECK_LOGS)
-	@$(MAKE) $(SUMMARY) $(REPORT_CSV) $(REPORT_MD)
+	@$(MAKE) REPORT_CSV='$(REPORT_CSV)' REPORT_MD='$(REPORT_MD)' $(SUMMARY) $(REPORT_CSV) $(REPORT_MD)
 	@cat $(REPORT_MD)
 	@awk -F, 'NR > 1 && $$3 != 0 { bad = 1 } END { exit bad }' $(REPORT_CSV)
 
