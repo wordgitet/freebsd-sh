@@ -46,6 +46,17 @@
 # define _SYS_CDEFS_COMPAT
 #endif
 
+/* The Apple SDK defines __CAST_AWAY_QUALIFIER (and thus __DECONST) using
+ * _Pragma inside a macro body.  GCC 16 rejects _Pragma when it appears
+ * inside a macro argument expression (e.g. as a function argument).
+ * Override both macros with a plain two-step cast when building with GCC. */
+#if defined(__GNUC__) && !defined(__clang__)
+# undef  __CAST_AWAY_QUALIFIER
+# define __CAST_AWAY_QUALIFIER(variable, qualifier, type) ((type)(uintptr_t)(variable))
+# undef  __DECONST
+# define __DECONST(type, var) ((type)(uintptr_t)(var))
+#endif
+
 #ifdef _SYS_CDEFS_COMPAT
 # ifdef  __cplusplus
 #  define __BEGIN_DECLS extern "C" {
@@ -72,14 +83,26 @@
 #ifndef __dead2
 #define __dead2
 #endif
+/* GCC does not recognise the "printf0" format specifier used by the Apple SDK
+ * __printf0like definition, so forcibly redefine it to a no-op when compiling
+ * with GCC regardless of what the SDK may have already declared. */
+#ifdef __GNUC__
+# ifndef __clang__
+#  undef  __printf0like
+#  define __printf0like(x, y)
+# endif
+#endif
 #ifndef __printf0like
 #define __printf0like(x, y)
 #endif
 #ifndef __printflike
 #define __printflike(x, y) __attribute__((format(printf, x, y)))
 #endif
+/* Use a two-step cast through uintptr_t so that GCC accepts the expansion
+ * even when it appears adjacent to a #pragma token (GCC 16 rejects a
+ * direct cast-expression before #pragma). */
 #ifndef __DECONST
-#define __DECONST(a, v) ((a)(v))
+#define __DECONST(type, var) ((type)(uintptr_t)(var))
 #endif
 #ifndef __unused
 #define __unused __attribute__((unused))
