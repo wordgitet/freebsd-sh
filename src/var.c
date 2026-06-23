@@ -90,6 +90,35 @@ struct var vps4;
 static struct var voptind;
 struct var vdisvfork;
 
+static struct var vlang;
+static struct var vlcall;
+static struct var vlccollate;
+static struct var vlcctype;
+static struct var vlcmonetary;
+static struct var vlcnumeric;
+static struct var vlctime;
+static struct var vlcmessages;
+
+static void
+changelocale_common(const char *name, const char *val)
+{
+	if (val && *val)
+		setenv(name, val, 1);
+	else
+		unsetenv(name);
+	(void)setlocale(LC_ALL, "");
+	updatecharset();
+}
+
+static void changelang(const char *val) { changelocale_common("LANG", val); }
+static void changelcall(const char *val) { changelocale_common("LC_ALL", val); }
+static void changelccollate(const char *val) { changelocale_common("LC_COLLATE", val); }
+static void changelcctype(const char *val) { changelocale_common("LC_CTYPE", val); }
+static void changelcmonetary(const char *val) { changelocale_common("LC_MONETARY", val); }
+static void changelcnumeric(const char *val) { changelocale_common("LC_NUMERIC", val); }
+static void changelctime(const char *val) { changelocale_common("LC_TIME", val); }
+static void changelcmessages(const char *val) { changelocale_common("LC_MESSAGES", val); }
+
 struct localvar *localvars;
 int forcelocal;
 
@@ -121,6 +150,22 @@ static const struct varinit varinit[] = {
 	  getoptsreset },
 	{ &vdisvfork,	VUNSET,				"SH_DISABLE_VFORK=",
 	  NULL },
+	{ &vlang,	VUNSET,				"LANG=",
+	  changelang },
+	{ &vlcall,	VUNSET,				"LC_ALL=",
+	  changelcall },
+	{ &vlccollate,	VUNSET,				"LC_COLLATE=",
+	  changelccollate },
+	{ &vlcctype,	VUNSET,				"LC_CTYPE=",
+	  changelcctype },
+	{ &vlcmonetary,	VUNSET,				"LC_MONETARY=",
+	  changelcmonetary },
+	{ &vlcnumeric,	VUNSET,				"LC_NUMERIC=",
+	  changelcnumeric },
+	{ &vlctime,	VUNSET,				"LC_TIME=",
+	  changelctime },
+	{ &vlcmessages,	VUNSET,				"LC_MESSAGES=",
+	  changelcmessages },
 	{ NULL,	0,				NULL,
 	  NULL }
 };
@@ -281,31 +326,6 @@ localevar(const char *s)
 
 
 /*
- * Sets/unsets an environment variable from a pointer that may actually be a
- * pointer into environ where the string should not be manipulated.
- */
-static void
-change_env(const char *s, int set)
-{
-	char *eqp;
-	char *ss;
-
-	INTOFF;
-	ss = savestr(s);
-	if ((eqp = strchr(ss, '=')) != NULL)
-		*eqp = '\0';
-	if (set && eqp != NULL)
-		(void) setenv(ss, eqp + 1, 1);
-	else
-		(void) unsetenv(ss);
-	ckfree(ss);
-	INTON;
-
-	return;
-}
-
-
-/*
  * Same as setvar except that the variable and value are passed in
  * the first argument as name=value.  Since the first argument will
  * be actually stored in the table, it should not be a string that
@@ -357,11 +377,6 @@ setvareq(char *s, int flags)
 		if ((vp == &vmpath || (vp == &vmail && ! mpathset())) &&
 		    iflag == 1)
 			chkmail(1);
-		if ((vp->flags & VEXPORT) && localevar(s)) {
-			change_env(s, 1);
-			(void) setlocale(LC_ALL, "");
-			updatecharset();
-		}
 		INTON;
 		return;
 	}
@@ -379,11 +394,6 @@ setvareq(char *s, int flags)
 	vp->next = *vpp;
 	vp->func = NULL;
 	*vpp = vp;
-	if ((vp->flags & VEXPORT) && localevar(s)) {
-		change_env(s, 1);
-		(void) setlocale(LC_ALL, "");
-		updatecharset();
-	}
 	INTON;
 }
 
@@ -677,11 +687,6 @@ exportcmd(int argc __unused, char **argv)
 				vp = find_var(name, NULL, NULL);
 				if (vp != NULL) {
 					vp->flags |= flag;
-					if ((vp->flags & VEXPORT) && localevar(vp->text)) {
-						change_env(vp->text, 1);
-						(void) setlocale(LC_ALL, "");
-						updatecharset();
-					}
 					continue;
 				}
 			}
@@ -792,7 +797,6 @@ poplocalvars(void)
 {
 	struct localvar *lvp;
 	struct var *vp;
-	int islocalevar;
 
 	INTOFF;
 	while ((lvp = localvars) != NULL) {
@@ -806,20 +810,12 @@ poplocalvars(void)
 			vp->flags &= ~VREADONLY;
 			(void)unsetvar(vp->text);
 		} else {
-			islocalevar = (vp->flags | lvp->flags) & VEXPORT &&
-			    localevar(lvp->text);
 			if ((vp->flags & VTEXTFIXED) == 0)
 				ckfree(vp->text);
 			vp->flags = lvp->flags;
 			vp->text = lvp->text;
 			if (vp->func)
 				(*vp->func)(vp->text + vp->name_len + 1);
-			if (islocalevar) {
-				change_env(vp->text, vp->flags & VEXPORT &&
-				    (vp->flags & VUNSET) == 0);
-				setlocale(LC_ALL, "");
-				updatecharset();
-			}
 		}
 		ckfree(lvp);
 	}
@@ -898,11 +894,8 @@ unsetvar(const char *s)
 		return (1);
 	if (vp->text[vp->name_len + 1] != '\0')
 		setvar(s, "", 0);
-	if ((vp->flags & VEXPORT) && localevar(vp->text)) {
-		change_env(s, 0);
-		setlocale(LC_ALL, "");
-		updatecharset();
-	}
+	else if (vp->func)
+		(*vp->func)(nullstr);
 	vp->flags &= ~VEXPORT;
 	vp->flags |= VUNSET;
 	if ((vp->flags & VSTRFIXED) == 0) {
