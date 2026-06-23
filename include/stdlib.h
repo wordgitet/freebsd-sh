@@ -65,12 +65,9 @@ int asprintf(char **strp, const char *fmt, ...);
 #define strtoq strtoll
 #endif
 
-#ifndef getprogname
-static inline const char *getprogname_impl(void) {
-    extern char *__progname;
-    return __progname;
-}
-#define getprogname getprogname_impl
+#ifndef HAVE_GETPROGNAME
+extern const char *compat_getprogname(void);
+#define getprogname compat_getprogname
 #endif
 
 int compat_mkostemp(char *path, int oflags);

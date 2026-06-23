@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+#include "config-compat.h"
 #include <stdio.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -39,6 +39,7 @@
 #include <fcntl.h>
 #include <locale.h>
 #include <errno.h>
+#include <string.h>
 
 #include "shell.h"
 #include "main.h"
@@ -70,6 +71,16 @@ int rootshell;
 struct jmploc main_handler;
 int localeisutf8, initial_localeisutf8;
 
+#ifndef HAVE_GETPROGNAME
+const char *sh_progname = "sh";
+
+const char *
+compat_getprogname(void)
+{
+	return sh_progname;
+}
+#endif
+
 static void reset(void);
 static void cmdloop(int);
 static void read_profile(const char *);
@@ -86,6 +97,12 @@ static char *find_dot_file(char *);
 int
 main(int argc, char *argv[])
 {
+#ifndef HAVE_GETPROGNAME
+	if (argv[0] != NULL) {
+		const char *p = strrchr(argv[0], '/');
+		sh_progname = p ? p + 1 : argv[0];
+	}
+#endif
 	/*
 	 * As smark is accessed after a longjmp, it cannot be a local in main().
 	 * The C standard specifies that the values of non-volatile local

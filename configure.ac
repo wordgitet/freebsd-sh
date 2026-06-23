@@ -6,6 +6,7 @@ AC_CONFIG_HEADERS([config-compat.h])
 dnl Checks for programs.
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
+AC_SYS_LARGEFILE
 
 
 
@@ -19,10 +20,10 @@ AC_MSG_RESULT(${CC_FOR_BUILD})
 AC_SUBST(CC_FOR_BUILD)
 
 dnl Checks for header files.
-AC_CHECK_HEADERS([sys/stat.h sys/types.h unistd.h string.h stdlib.h limits.h])
+AC_CHECK_HEADERS([sys/stat.h sys/types.h unistd.h string.h stdlib.h limits.h err.h])
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS([strtoq strlcpy strlcat strtonum reallocf reallocarray errc warnc asprintf vasprintf])
+AC_CHECK_FUNCS([strtoq strlcpy strlcat strtonum reallocf reallocarray errc warnc asprintf vasprintf getprogname wait3])
 
 dnl Check for strchrnul respecting availability on macOS
 AC_MSG_CHECKING([for working strchrnul])

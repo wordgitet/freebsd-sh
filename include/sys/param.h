@@ -65,4 +65,12 @@
 # endif
 #endif
 
+#ifndef MAXPATHLEN
+# ifdef MAXPATHNAMELEN
+#  define MAXPATHLEN MAXPATHNAMELEN
+# else
+#  define MAXPATHLEN 1024
+# endif
+#endif
+
 #endif

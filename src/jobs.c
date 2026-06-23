@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+#include "config-compat.h"
 #include <sys/ioctl.h>
 #include <sys/param.h>
 #include <sys/resource.h>
@@ -1207,8 +1207,12 @@ dowait(int mode, struct job *job)
 			sigfillset(&mask);
 			sigprocmask(SIG_BLOCK, &mask, &omask);
 			gotsigchld = 0;
+#ifdef HAVE_WAIT3
 			pid = wait3(&status, wflags | WNOHANG,
 			    (struct rusage *)NULL);
+#else
+			pid = waitpid(-1, &status, wflags | WNOHANG);
+#endif
 			TRACE(("wait returns %d, status=%d\n", (int)pid, status));
 			if (pid != 0) {
 				sigprocmask(SIG_SETMASK, &omask, NULL);
@@ -1225,7 +1229,11 @@ dowait(int mode, struct job *job)
 		}
 		if ((mode & (DOWAIT_BLOCK | DOWAIT_SIG)) != DOWAIT_BLOCK)
 			wflags |= WNOHANG;
+#ifdef HAVE_WAIT3
 		pid = wait3(&status, wflags, (struct rusage *)NULL);
+#else
+		pid = waitpid(-1, &status, wflags);
+#endif
 		TRACE(("wait returns %d, status=%d\n", (int)pid, status));
 		if (pid == 0 && (mode & DOWAIT_SIG) != 0) {
 			pid = -1;
