@@ -1,5 +1,8 @@
-/* source: musl libc */
+/* source: musl libc and OpenBSD */
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 
@@ -36,3 +39,30 @@ char *strchrnul(const char *s, int c) {
 }
 #endif
 
+#ifndef HAVE_ASPRINTF
+int vasprintf(char **strp, const char *fmt, va_list ap) {
+    va_list ap2;
+    int len;
+    char *buf;
+
+    va_copy(ap2, ap);
+    len = vsnprintf(NULL, 0, fmt, ap2);
+    va_end(ap2);
+
+    if (len < 0) return -1;
+    buf = malloc((size_t)len + 1);
+    if (!buf) return -1;
+    vsnprintf(buf, (size_t)len + 1, fmt, ap);
+    *strp = buf;
+    return len;
+}
+
+int asprintf(char **strp, const char *fmt, ...) {
+    va_list ap;
+    int ret;
+    va_start(ap, fmt);
+    ret = vasprintf(strp, fmt, ap);
+    va_end(ap);
+    return ret;
+}
+#endif

@@ -55,6 +55,12 @@ static inline void *reallocarray(void *ptr, size_t nmemb, size_t size) {
 }
 #endif
 
+#ifndef HAVE_ASPRINTF
+#include <stdarg.h>
+int vasprintf(char **strp, const char *fmt, va_list ap);
+int asprintf(char **strp, const char *fmt, ...);
+#endif
+
 #ifndef HAVE_STRTOQ
 #define strtoq strtoll
 #endif
