@@ -34,8 +34,14 @@
 
 #include <string.h>
 
+#ifndef ALIGNBYTES
 #define ALIGNBYTES (sizeof(void *) - 1)
+#endif
+#ifndef ALIGN
 #define ALIGN(v) (((uintptr_t)(v) + ALIGNBYTES) & ~ALIGNBYTES)
+#endif
+
+
 
 struct stackmark {
 	struct stack_block *stackp;

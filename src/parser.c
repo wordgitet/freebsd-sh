@@ -630,7 +630,7 @@ command(void)
 		consumetoken(TDONE);
 		checkkwd = CHKKWD | CHKALIAS;
 		break;
-	case TFOR:
+	case TFOR: {
 		static const char *const for_in_kwd[] = { "in", "do", NULL };
 		static const char *const for_body_kwd[] = { "do", "{", NULL };
 		if (readtoken() != TWORD || quoteflag || ! goodname(wordtext))
@@ -696,7 +696,8 @@ command(void)
 		consumetoken(t);
 		checkkwd = CHKKWD | CHKALIAS;
 		break;
-	case TCASE:
+	}
+	case TCASE: {
 		static const char *const case_in_kwd[] = { "in", NULL };
 
 		n1 = (union node *)stalloc(sizeof (struct ncase));
@@ -745,6 +746,7 @@ command(void)
 		*cpp = NULL;
 		checkkwd = CHKKWD | CHKALIAS;
 		break;
+	}
 	case TLP:
 		n1 = (union node *)stalloc(sizeof (struct nredir));
 		n1->type = NSUBSHELL;

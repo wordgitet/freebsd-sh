@@ -27,6 +27,17 @@ confd.set('HAVE_STRTOQ', cc.has_function('strtoq'))
 confd.set('HAVE_STRLCPY', cc.has_function('strlcpy'))
 confd.set('HAVE_STRLCAT', cc.has_function('strlcat'))
 confd.set('HAVE_STRTONUM', cc.has_function('strtonum'))
+strchrnul_args = []
+if cc.has_argument('-Werror=unguarded-availability-new')
+    strchrnul_args += ['-Werror=unguarded-availability-new']
+endif
+
+confd.set('HAVE_STRCHRNUL', cc.links('''
+#include <string.h>
+int main(void) {
+    return !strchrnul("", 0);
+}
+''', name: 'strchrnul', args: strchrnul_args))
 confd.set('HAVE_REALLOCF', cc.has_function('reallocf'))
 confd.set('HAVE_REALLOCARRAY', cc.has_function('reallocarray'))
 confd.set('HAVE_ERRC', cc.has_function('errc'))

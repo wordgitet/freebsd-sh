@@ -25,3 +25,14 @@ size_t strlcat(char *d, const char *s, size_t n) {
     return l + strlcpy(d + l, s, n - l);
 }
 #endif
+
+#ifndef HAVE_STRCHRNUL
+char *strchrnul(const char *s, int c) {
+    c = (unsigned char)c;
+    while (*s && *s != c) {
+        s++;
+    }
+    return (char *)s;
+}
+#endif
+
