@@ -1,4 +1,4 @@
-AC_INIT([freebsd-sh], [0.1.0])
+AC_INIT([neoash], [15.0-ver1])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config-compat.h])
