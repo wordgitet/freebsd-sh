@@ -1,7 +1,7 @@
 freebsd-sh
-=========
+==========
 
-Standalone Meson-based extraction of the FreeBSD sh shell from chimerautils.
+Standalone Autotools-based extraction of the FreeBSD sh shell from chimerautils.
 
 
 Policy:
@@ -19,22 +19,24 @@ wins by default. Yash behavior and the POSIX text are the main
 day-to-day reference points for compliance work. Dash may be useful as
 an extra comparison point, but it is not the primary model.
 
+
 Build:
 =====
 
-$ meson setup build
-$ meson compile -C build
+$ autoreconf -fi
+$ ./configure
+$ make
 
 Build without libedit history and line editing:
 
-$ meson setup build-noedit -Dlibedit=disabled
-$ meson compile -C build-noedit
+$ ./configure --without-libedit
+$ make
 
 
 Run:
 ===
 
-$ ./build/src/sh -c 'echo ok'
+$ ./src/sh -c 'echo ok'
 
 
 Test:
@@ -42,20 +44,20 @@ Test:
 
 Primary POSIX scoreboard:
 
-$ make TESTEE=./build/src/sh test-posix-report
+$ make TESTEE=./src/sh test-posix-report
 
 Faster non-signal POSIX pass:
 
-$ make TESTEE=./build/src/sh test-posix-nosignal-report
+$ make TESTEE=./src/sh test-posix-nosignal-report
 
 Secondary FreeBSD guardrail:
 
-$ make TESTEE=./build/src/sh test-posix-freebsd
+$ make TESTEE=./src/sh test-posix-freebsd
 
 Convenience aliases:
 
-$ make TESTEE=./build/src/sh test-primary
-$ make TESTEE=./build/src/sh test-guardrail
+$ make TESTEE=./src/sh test-primary
+$ make TESTEE=./src/sh test-guardrail
 
 
 Layout:
