@@ -107,6 +107,10 @@ Rules:
 
 If a commit is not a merge commit, use the normal commit format above.
 
+### Versioning
+
+Every commit that modifies code or build configurations must bump the project version (e.g., from `15.0-verX` to `15.0-verY` in `configure.ac`) as part of the same commit. The only exceptions are commits that solely update documentation, tests, or other non-code-related assets.
+
 ## Compliance strategy
 
 This project is POSIX-first.
