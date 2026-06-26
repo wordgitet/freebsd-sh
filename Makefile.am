@@ -48,3 +48,29 @@ clean-test-posix:
 
 # Clean the test files on standard clean
 clean-local: clean-test-posix
+
+# Custom installation targets
+USER_PREFIX ?= $(HOME)/.local
+
+.PHONY: install-user install-bin install-bin-user install-static install-static-user
+
+install-user:
+	$(MAKE) prefix='$(USER_PREFIX)' install
+
+install-bin:
+	$(MAKE) -C src install-binPROGRAMS
+
+install-bin-user:
+	$(MAKE) -C src install-binPROGRAMS prefix='$(USER_PREFIX)'
+
+install-static:
+	rm -f src/neoash src/neoash$(EXEEXT)
+	$(MAKE) -C src neoash LDFLAGS='-static $(LDFLAGS)'
+	$(MAKE) LDFLAGS='-static $(LDFLAGS)' install
+	rm -f src/neoash src/neoash$(EXEEXT)
+
+install-static-user:
+	rm -f src/neoash src/neoash$(EXEEXT)
+	$(MAKE) -C src neoash LDFLAGS='-static $(LDFLAGS)'
+	$(MAKE) LDFLAGS='-static $(LDFLAGS)' prefix='$(USER_PREFIX)' install
+	rm -f src/neoash src/neoash$(EXEEXT)
