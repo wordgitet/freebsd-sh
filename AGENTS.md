@@ -136,10 +136,10 @@ This project is POSIX-first.
 
 ### Test workflow
 
-- Use `make TESTEE=./build/src/sh test-posix-report` as the main
+- Use `make TESTEE=./src/neoash test-posix-report` as the main
   correctness scoreboard.
-- Use `make TESTEE=./build/src/sh test-posix-nosignal-report` for
+- Use `make TESTEE=./src/neoash test-posix-nosignal-report` for
   faster iteration when working outside signals and job control.
-- Use `make TESTEE=./build/src/sh test-posix-freebsd` as a secondary
+- Use `make TESTEE=./src/neoash test-posix-freebsd` as a secondary
   regression pass after changes in `cd`, `wait`, parser/error
   behavior, or traps/job control.

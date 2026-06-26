@@ -7,7 +7,7 @@ EXTRA_DIST = README UPSTREAM.md AGENTS.md \
     include/sha512t.h include/signal.h include/stdlib.h include/string.h \
     include/time_bsd.h include/unistd.h include/utmpx.h include/wchar.h
 
-TESTEE ?= $(top_builddir)/src/sh
+TESTEE ?= $(top_builddir)/src/neoash
 TIMEOUT ?= 160s
 
 .PHONY: test-posix test-posix-nosignal test-posix-report test-posix-nosignal-report test-posix-freebsd test-posix-yash test-posix-smoosh test-primary test-guardrail clean-test-posix

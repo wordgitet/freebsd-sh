@@ -30,7 +30,7 @@
 /src/.dirstamp
 
 # Build products
-/src/sh
+/src/neoash
 /src/*.o
 /src/bltin/*.o
 /src/compat/*.o

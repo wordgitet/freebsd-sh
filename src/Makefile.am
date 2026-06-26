@@ -1,9 +1,9 @@
 AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
 AM_CFLAGS = $(AX_CFLAGS)
 
-bin_PROGRAMS = sh
+bin_PROGRAMS = neoash
 
-sh_SOURCES = \
+neoash_SOURCES = \
 	alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
 	histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
 	mystring.c options.c output.c parser.c redir.c show.c trap.c var.c \
@@ -13,7 +13,7 @@ sh_SOURCES = \
 	input.h jobs.h mail.h main.h memalloc.h myhistedit.h mystring.h \
 	options.h output.h parser.h redir.h shell.h show.h trap.h var.h
 
-nodist_sh_SOURCES = \
+nodist_neoash_SOURCES = \
 	builtins.c builtins.h \
 	nodes.c nodes.h \
 	syntax.c syntax.h \
@@ -22,9 +22,9 @@ nodist_sh_SOURCES = \
 BUILT_SOURCES = token.h builtins.h builtins.c nodes.h nodes.c syntax.h syntax.c
 CLEANFILES = $(BUILT_SOURCES) mknodes mksyntax
 
-man_MANS = sh.1
+man_MANS = neoash.1
 
-EXTRA_DIST = sh.1 mktokens mkbuiltins builtins.def mknodes.c nodetypes nodes.c.pat mksyntax.c
+EXTRA_DIST = neoash.1 mktokens mkbuiltins builtins.def mknodes.c nodetypes nodes.c.pat mksyntax.c
 
 token.h: mktokens
 	$(AM_V_GEN)$(SHELL) $(srcdir)/mktokens .
