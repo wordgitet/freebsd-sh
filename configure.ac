@@ -13,11 +13,17 @@ AC_SYS_LARGEFILE
 AC_MSG_CHECKING([for build system compiler])
 if test "$cross_compiling" = yes; then
 	CC_FOR_BUILD=${CC_FOR_BUILD-cc}
+	LDFLAGS_FOR_BUILD=${LDFLAGS_FOR_BUILD-}
+	CFLAGS_FOR_BUILD=${CFLAGS_FOR_BUILD-}
 else
 	CC_FOR_BUILD=${CC}
+	LDFLAGS_FOR_BUILD=${LDFLAGS}
+	CFLAGS_FOR_BUILD=${CFLAGS}
 fi
 AC_MSG_RESULT(${CC_FOR_BUILD})
 AC_SUBST(CC_FOR_BUILD)
+AC_SUBST(LDFLAGS_FOR_BUILD)
+AC_SUBST(CFLAGS_FOR_BUILD)
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([sys/stat.h sys/types.h unistd.h string.h stdlib.h limits.h err.h paths.h])

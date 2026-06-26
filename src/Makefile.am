@@ -41,7 +41,7 @@ syntax.h syntax.c: mksyntax
 # Compile build tools for the build machine
 COMPILE_FOR_BUILD = \
 	$(CC_FOR_BUILD) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) \
-	$(AM_CFLAGS_FOR_BUILD) $(CFLAGS_FOR_BUILD)
+	$(AM_CFLAGS_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD)
 
 AM_CFLAGS_FOR_BUILD = -g -O2
 

@@ -3,11 +3,17 @@
 /* Define to 1 if you have the 'asprintf' function. */
 #undef HAVE_ASPRINTF
 
+/* Define to 1 if you have the 'eaccess' function. */
+#undef HAVE_EACCESS
+
 /* Define to 1 if you have the 'errc' function. */
 #undef HAVE_ERRC
 
 /* Define to 1 if you have the <err.h> header file. */
 #undef HAVE_ERR_H
+
+/* Define to 1 if you have the 'faccessat' function. */
+#undef HAVE_FACCESSAT
 
 /* Define if libedit has fn_complete2 */
 #undef HAVE_FN_COMPLETE2
@@ -26,6 +32,9 @@
 
 /* Define to 1 if you have the <minix/config.h> header file. */
 #undef HAVE_MINIX_CONFIG_H
+
+/* Define to 1 if you have the <paths.h> header file. */
+#undef HAVE_PATHS_H
 
 /* Define to 1 if you have the 'reallocarray' function. */
 #undef HAVE_REALLOCARRAY
