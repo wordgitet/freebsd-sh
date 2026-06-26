@@ -28,11 +28,11 @@
 #ifndef STRING_H
 #define STRING_H
 
+#include "config-compat.h"
+
 #include_next <string.h>
 
 #include <sys/types.h>
-
-#include "config-compat.h"
 
 #ifdef __cplusplus
 extern "C" {

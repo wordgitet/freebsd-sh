@@ -28,9 +28,9 @@
 #ifndef STDLIB_H
 #define STDLIB_H
 
-#include_next <stdlib.h>
-
 #include "config-compat.h"
+
+#include_next <stdlib.h>
 
 int mergesort(void *, size_t, size_t, int (*)(const void *, const void *));
 int heapsort(void *, size_t, size_t, int (*)(const void *, const void *));
