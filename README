@@ -1,4 +1,4 @@
-neoash
+oaneoash
 ======
 
 Standalone Autotools-based extraction of the FreeBSD sh shell from chimerautils.
@@ -36,7 +36,7 @@ $ make
 Run:
 ===
 
-$ ./src/sh -c 'echo ok'
+$ ./src/neoash -c 'echo ok'
 
 
 Test:
@@ -44,20 +44,20 @@ Test:
 
 Primary POSIX scoreboard:
 
-$ make TESTEE=./src/sh test-posix-report
+$ make TESTEE=./src/neoash test-posix-report
 
 Faster non-signal POSIX pass:
 
-$ make TESTEE=./src/sh test-posix-nosignal-report
+$ make TESTEE=./src/neoash test-posix-nosignal-report
 
 Secondary FreeBSD guardrail:
 
-$ make TESTEE=./src/sh test-posix-freebsd
+$ make TESTEE=./src/neoash test-posix-freebsd
 
 Convenience aliases:
 
-$ make TESTEE=./src/sh test-primary
-$ make TESTEE=./src/sh test-guardrail
+$ make TESTEE=./src/neoash test-primary
+$ make TESTEE=./src/neoash test-guardrail
 
 
 Layout:
