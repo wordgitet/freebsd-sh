@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -DSHELL -D_GNU_SOURCE -D_ALL_SOURCE -D_DARWIN_C_SOURCE -D__EXTENSIONS__ -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
+AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
 AM_CFLAGS = $(AX_CFLAGS)
 
 bin_PROGRAMS = sh

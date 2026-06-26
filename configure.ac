@@ -8,6 +8,16 @@ AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
 
+dnl Feature-test macros must be active on the compiler command line, not
+dnl only in config-compat.h.  Our shadow headers use include_next, which
+dnl pulls in system headers before config-compat.h is processed.  Without
+dnl these macros on the command line, Bionic and other libc variants will
+dnl not expose GNU extensions (strchrnul, etc.) when compiling those files.
+dnl AC_USE_SYSTEM_EXTENSIONS defines them in config-compat.h and for
+dnl configure checks, but may not add them to CPPFLAGS on non-GNU targets.
+SHELL_EXT_CPPFLAGS="-D_GNU_SOURCE -D_ALL_SOURCE -D_DARWIN_C_SOURCE -D__EXTENSIONS__"
+AC_SUBST([SHELL_EXT_CPPFLAGS])
+
 
 
 AC_MSG_CHECKING([for build system compiler])
@@ -93,18 +103,31 @@ else
     AC_DEFINE([NO_HISTORY], 1, [Define to disable history if libedit is missing])
 fi
 
-dnl Check for warning flags
+dnl Check for warning flags.
+dnl First probe whether the compiler understands -Werror=unknown-warning-option
+dnl (a Clang feature).  If so, we use it as a strictness gate when testing
+dnl subsequent -Wno-* flags: Clang silently accepts unknown -Wno-* flags at
+dnl compile time but warns about them later, so the plain compile test is not
+dnl sufficient.  GCC does not support the meta-flag, so it falls back to the
+dnl plain test (GCC errors on truly unknown flags, which is strict enough).
 AX_CFLAGS="-Wall -Wextra"
-for flag in -Wno-unused-result -Wno-string-plus-int -Wno-clobbered; do
+AC_MSG_CHECKING([if compiler supports -Werror=unknown-warning-option])
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror=unknown-warning-option"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])],
+    [flag_probe="-Werror=unknown-warning-option"; AC_MSG_RESULT([yes])],
+    [flag_probe=""; AC_MSG_RESULT([no])])
+CFLAGS="$save_CFLAGS"
+for flag in -Wno-unknown-warning-option \
+            -Wno-unused-result \
+            -Wno-string-plus-int \
+            -Wno-clobbered; do
     AC_MSG_CHECKING([if compiler supports $flag])
     save_CFLAGS="$CFLAGS"
-    CFLAGS="$CFLAGS $flag"
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], [
-        AX_CFLAGS="$AX_CFLAGS $flag"
-        AC_MSG_RESULT([yes])
-    ], [
-        AC_MSG_RESULT([no])
-    ])
+    CFLAGS="$CFLAGS $flag_probe $flag"
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])],
+        [AX_CFLAGS="$AX_CFLAGS $flag"; AC_MSG_RESULT([yes])],
+        [AC_MSG_RESULT([no])])
     CFLAGS="$save_CFLAGS"
 done
 AC_SUBST([AX_CFLAGS])
