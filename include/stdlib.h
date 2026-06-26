@@ -44,7 +44,7 @@ long long strtonum(const char *nptr, long long minv, long long maxv, const char 
 void *reallocf(void *ptr, size_t size);
 #endif
 
-#ifndef HAVE_REALLOCARRAY
+#if !defined(HAVE_REALLOCARRAY) || (defined(HAVE_DECL_REALLOCARRAY) && !HAVE_DECL_REALLOCARRAY)
 void *reallocarray(void *ptr, size_t nmemb, size_t size);
 #endif
 

@@ -3,6 +3,10 @@
 /* Define to 1 if you have the 'asprintf' function. */
 #undef HAVE_ASPRINTF
 
+/* Define to 1 if you have the declaration of 'reallocarray', and to 0 if you
+   don't. */
+#undef HAVE_DECL_REALLOCARRAY
+
 /* Define to 1 if you have the 'eaccess' function. */
 #undef HAVE_EACCESS
 
