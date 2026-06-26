@@ -31,6 +31,7 @@ AC_CHECK_HEADERS([sys/stat.h sys/types.h unistd.h string.h stdlib.h limits.h err
 dnl Checks for library functions.
 AC_CHECK_FUNCS([strtoq strlcpy strlcat strtonum reallocf reallocarray errc warnc asprintf vasprintf getprogname wait3 eaccess faccessat])
 AC_CHECK_DECLS([reallocarray], [], [], [[#include <stdlib.h>]])
+AC_CHECK_DECLS([strchrnul], [], [], [[#include <string.h>]])
 
 dnl Check for strchrnul respecting availability on macOS
 AC_MSG_CHECKING([for working strchrnul])

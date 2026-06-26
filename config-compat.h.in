@@ -7,6 +7,10 @@
    don't. */
 #undef HAVE_DECL_REALLOCARRAY
 
+/* Define to 1 if you have the declaration of 'strchrnul', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRCHRNUL
+
 /* Define to 1 if you have the 'eaccess' function. */
 #undef HAVE_EACCESS
 

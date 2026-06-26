@@ -48,7 +48,7 @@ size_t strlcpy(char *d, const char *s, size_t n);
 size_t strlcat(char *d, const char *s, size_t n);
 #endif
 
-#ifndef HAVE_STRCHRNUL
+#if !defined(HAVE_STRCHRNUL) || (defined(HAVE_DECL_STRCHRNUL) && !HAVE_DECL_STRCHRNUL)
 char *strchrnul(const char *s, int c);
 #endif
 
