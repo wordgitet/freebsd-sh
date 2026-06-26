@@ -31,13 +31,30 @@
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
-#include <sys/random.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+/* getrandom(2) / GRND_NONBLOCK: available in sys/random.h.
+ * On Bionic this requires API >= 28; on older targets fall through
+ * to the time-based fallback in the code below. */
+#ifdef __ANDROID_API__
+#  if __ANDROID_API__ >= 28
+#    include <sys/random.h>
+#  else
+static inline int getrandom(void *buf, size_t buflen, unsigned int flags)
+{
+    (void)buf; (void)buflen; (void)flags;
+    errno = ENOSYS;
+    return -1;
+}
+#    define GRND_NONBLOCK 0x0001
+#  endif
+#else
+#  include <sys/random.h>
+#endif
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>

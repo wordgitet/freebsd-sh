@@ -30,15 +30,17 @@
 
 #include "config-compat.h"
 
-#ifdef HAVE_ERR_H
-#include_next <err.h>
-#else
-
+/* Always pull these in first so inline fallbacks and include_next <err.h>
+ * see proper declarations for stderr, strerror, getprogname, etc. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <errno.h>
+
+#ifdef HAVE_ERR_H
+#include_next <err.h>
+#else
 
 #ifndef HAVE_GETPROGNAME
 extern const char *compat_getprogname(void);
