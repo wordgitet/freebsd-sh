@@ -45,14 +45,7 @@ void *reallocf(void *ptr, size_t size);
 #endif
 
 #ifndef HAVE_REALLOCARRAY
-#include <errno.h>
-static inline void *reallocarray(void *ptr, size_t nmemb, size_t size) {
-    if (nmemb > 0 && size > 0 && nmemb > (size_t)-1 / size) {
-        errno = ENOMEM;
-        return NULL;
-    }
-    return realloc(ptr, nmemb * size);
-}
+void *reallocarray(void *ptr, size_t nmemb, size_t size);
 #endif
 
 #ifndef HAVE_ASPRINTF

@@ -39,6 +39,17 @@ char *strchrnul(const char *s, int c) {
 }
 #endif
 
+#ifndef HAVE_REALLOCARRAY
+#include <errno.h>
+void *reallocarray(void *ptr, size_t nmemb, size_t size) {
+    if (nmemb > 0 && size > 0 && nmemb > (size_t)-1 / size) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    return realloc(ptr, nmemb * size);
+}
+#endif
+
 #ifndef HAVE_ASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap) {
     va_list ap2;
