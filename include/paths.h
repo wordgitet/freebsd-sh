@@ -25,27 +25,43 @@
  * SUCH DAMAGE.
  */
 
-#ifndef UNISTD_H
-#define UNISTD_H
+#ifndef PATHS_H
+#define PATHS_H
 
 #include "config-compat.h"
 
-#include_next <unistd.h>
-#include <sys/stat.h>
-
-/*
- * eaccess(2) uses effective credentials for permission checks (as opposed
- * to access(2) which uses real credentials).  Bionic (Android), QNX, and
- * some other systems lack eaccess but provide faccessat(2) which we can
- * use to implement the same semantics with AT_EACCESS.
- */
-#if !defined(HAVE_EACCESS) && defined(HAVE_FACCESSAT)
-#include <fcntl.h>
-#define eaccess(path, mode) faccessat(AT_FDCWD, (path), (mode), AT_EACCESS)
+#ifdef HAVE_PATHS_H
+#include_next <paths.h>
 #endif
 
-mode_t getmode(const void *, mode_t);
-void *setmode(const char *);
+/* Fallbacks for systems without <paths.h> (e.g. Bionic/Android, QNX) */
 
+#ifndef _PATH_BSHELL
+#define _PATH_BSHELL    "/bin/sh"
 #endif
 
+#ifndef _PATH_DEV
+#define _PATH_DEV       "/dev/"
+#endif
+
+#ifndef _PATH_TTY
+#define _PATH_TTY       "/dev/tty"
+#endif
+
+#ifndef _PATH_DEVNULL
+#define _PATH_DEVNULL   "/dev/null"
+#endif
+
+#ifndef _PATH_TMP
+#define _PATH_TMP       "/tmp/"
+#endif
+
+#ifndef _PATH_STDPATH
+#define _PATH_STDPATH   "/usr/bin:/bin"
+#endif
+
+#ifndef _PATH_DEFPATH
+#define _PATH_DEFPATH   "/usr/bin:/bin"
+#endif
+
+#endif

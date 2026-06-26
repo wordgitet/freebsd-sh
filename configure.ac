@@ -20,10 +20,10 @@ AC_MSG_RESULT(${CC_FOR_BUILD})
 AC_SUBST(CC_FOR_BUILD)
 
 dnl Checks for header files.
-AC_CHECK_HEADERS([sys/stat.h sys/types.h unistd.h string.h stdlib.h limits.h err.h])
+AC_CHECK_HEADERS([sys/stat.h sys/types.h unistd.h string.h stdlib.h limits.h err.h paths.h])
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS([strtoq strlcpy strlcat strtonum reallocf reallocarray errc warnc asprintf vasprintf getprogname wait3])
+AC_CHECK_FUNCS([strtoq strlcpy strlcat strtonum reallocf reallocarray errc warnc asprintf vasprintf getprogname wait3 eaccess faccessat])
 
 dnl Check for strchrnul respecting availability on macOS
 AC_MSG_CHECKING([for working strchrnul])
