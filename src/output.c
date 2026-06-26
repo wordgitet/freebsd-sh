@@ -312,9 +312,9 @@ fmtstr(char *outbuf, int length, const char *fmt, ...)
 	INTON;
 }
 
-#ifdef __APPLE__
+#if defined(HAVE_FUNOPEN)
 static int
-doformat_wr_apple(void *cookie, const char *buf, int len)
+doformat_wr_funopen(void *cookie, const char *buf, int len)
 {
 	struct output *o;
 
@@ -323,9 +323,9 @@ doformat_wr_apple(void *cookie, const char *buf, int len)
 
 	return (len);
 }
-#else
+#elif defined(HAVE_FOPENCOOKIE)
 static ssize_t
-doformat_wr(void *cookie, const char *buf, size_t len)
+doformat_wr_fopencookie(void *cookie, const char *buf, size_t len)
 {
 	struct output *o;
 
@@ -336,11 +336,13 @@ doformat_wr(void *cookie, const char *buf, size_t len)
 }
 
 static cookie_io_functions_t func = {
-    .write = doformat_wr,
+    .write = doformat_wr_fopencookie,
     .read = NULL,
     .seek = NULL,
     .close = NULL
 };
+#else
+#error "Platform must support either funopen or fopencookie"
 #endif
 
 void
@@ -348,9 +350,9 @@ doformat(struct output *dest, const char *f, va_list ap)
 {
 	FILE *fp;
 
-#ifdef __APPLE__
-	if ((fp = funopen(dest, NULL, doformat_wr_apple, NULL, NULL)) != NULL) {
-#else
+#if defined(HAVE_FUNOPEN)
+	if ((fp = funopen(dest, NULL, doformat_wr_funopen, NULL, NULL)) != NULL) {
+#elif defined(HAVE_FOPENCOOKIE)
 	if ((fp = fopencookie(dest, "a", func)) != NULL) {
 #endif
 		vfprintf(fp, f, ap);
@@ -361,9 +363,9 @@ doformat(struct output *dest, const char *f, va_list ap)
 FILE *
 out1fp(void)
 {
-#ifdef __APPLE__
-	return funopen(out1, NULL, doformat_wr_apple, NULL, NULL);
-#else
+#if defined(HAVE_FUNOPEN)
+	return funopen(out1, NULL, doformat_wr_funopen, NULL, NULL);
+#elif defined(HAVE_FOPENCOOKIE)
 	return fopencookie(out1, "a", func);
 #endif
 }

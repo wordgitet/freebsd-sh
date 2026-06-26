@@ -26,6 +26,12 @@
 /* Define if libedit has fn_complete2 */
 #undef HAVE_FN_COMPLETE2
 
+/* Define to 1 if you have the 'fopencookie' function. */
+#undef HAVE_FOPENCOOKIE
+
+/* Define to 1 if you have the 'funopen' function. */
+#undef HAVE_FUNOPEN
+
 /* Define to 1 if you have the 'getprogname' function. */
 #undef HAVE_GETPROGNAME
 
