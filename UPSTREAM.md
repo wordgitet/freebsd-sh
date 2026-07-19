@@ -7,6 +7,12 @@ This repo is a fresh standalone snapshot extracted from:
 - Commit date: `2026-02-11`
 - Commit subject: `fix build with muon`
 
+The shell sources were subsequently synchronized with:
+
+- Commit: `7efe8c9e921b018fa165674ac4382cbe8ac96308`
+- Commit date: `2026-07-03`
+- Commit subject: `update to 15.1-RELEASE`
+
 ## Imported paths
 
 - `src.freebsd/sh` -> `src/`
@@ -25,3 +31,6 @@ This repo is a fresh standalone snapshot extracted from:
 - This extraction intentionally does not preserve upstream git history.
 - The standalone repo builds only the shell binary and its manpage.
 - Standalone `/bin/test` and `[` install targets are intentionally omitted.
+- The 15.1 job-lifecycle update is not imported because it produces
+  unsolicited completed-job notifications and regresses the POSIX signal
+  suite.
