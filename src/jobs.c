@@ -1113,9 +1113,10 @@ waitforjob(struct job *jp, int *signaled)
 	TRACE(("waitforjob(%%%td) called\n", jp - jobtab + 1));
 	while ((jp = jobtab + jobno)->state == 0)
 		if (dowait(DOWAIT_BLOCK | (Tflag ? DOWAIT_SIG |
-		    DOWAIT_SIG_TRAP : 0), jp) == -1)
+		    DOWAIT_SIG_TRAP : 0), jp) == -1) {
 			dotrap();
-	jp = jobtab + jobno;
+			jp = jobtab + jobno;
+		}
 #if JOBS
 	if (jp->jobctl) {
 		if (ttyfd >= 0 && xtcsetpgrp(ttyfd, rootpid) < 0)
