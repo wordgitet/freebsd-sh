@@ -968,6 +968,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	int had_cmdsub;
 	int delayed_assigns;
 	int path_override;
+	volatile int saveloopnest;
 	const char *path = pathval();
 	int i;
 
@@ -1246,6 +1247,13 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		localvars = NULL;
 		reffunc(cmdentry.u.func);
 		savehandler = handler;
+		/*
+		 * A function does not inherit loops from its caller.  This keeps
+		 * break and continue local to loops evaluated by the function,
+		 * rather than allowing non-lexical control to escape the call.
+		 */
+		saveloopnest = loopnest;
+		loopnest = 0;
 		in_redirect = 1;
 		if (setjmp(jmploc.loc)) {
 			e = exception;
@@ -1256,6 +1264,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			freeparam(&shellparam);
 			shellparam = saveparam;
 			funcnest--;
+			loopnest = saveloopnest;
 			handler = savehandler;
 			if (e == EXERROR && in_redirect) {
 				FORCEINTON;
@@ -1283,6 +1292,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		shellparam = saveparam;
 		handler = savehandler;
 		funcnest--;
+		loopnest = saveloopnest;
 		popredir();
 		INTON;
 		if (evalskip == SKIPRETURN) {

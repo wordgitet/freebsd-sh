@@ -1,14 +1,13 @@
 
-# We accept this and people might rely on it.
-# However, various other shells do not accept it.
+# Do not allow a break in a function to escape into its caller's loop.
 
 f() {
 	break
-	echo bad1
+	echo good1
 }
 
 while :; do
 	f
-	echo bad2
-	exit 2
+	echo good2
+	break
 done
