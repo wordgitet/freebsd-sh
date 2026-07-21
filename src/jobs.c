@@ -726,22 +726,15 @@ int
 killjob(const char *name, int sig)
 {
 	struct job *jp;
-	int i, ret;
 
 	jp = getjob(name);
 	if (jp->state == JOBDONE)
 		return 0;
-	if (jp->jobctl)
-		return kill(-jp->ps[0].pid, sig);
-	ret = -1;
-	errno = ESRCH;
-	for (i = 0; i < jp->nprocs; i++)
-		if (jp->ps[i].status == -1 || WIFSTOPPED(jp->ps[i].status)) {
-			if (kill(jp->ps[i].pid, sig) == 0)
-				ret = 0;
-		} else
-			ret = 0;
-	return ret;
+	if (!jp->jobctl) {
+		errno = ESRCH;
+		return -1;
+	}
+	return kill(-jp->ps[0].pid, sig);
 }
 
 static int
