@@ -1,0 +1,27 @@
+--- lib/modernish/mdl/sys/term/readkey.mm	2020-02-09 02:09:50.000000000 +0000
++++ lib/modernish/mdl/sys/term/readkey.mm	2020-02-09 02:10:28.000000000 +0000
+@@ -115,10 +115,8 @@
+ 	# If the buffer variable is empty, fill it with up to 512 bytes from the keyboard buffer.
+ 	is onterminal stdin || return 2
+ 	_Msh_rK_s=$(unset -f stty; PATH=$DEFPATH exec stty -g) || die "readkey: save terminal state: stty failed"
+-	if not isset -i; then
+-		pushtrap '_Msh_readkey_setTerminalState' CONT
+-		pushtrap '_Msh_readkey_restoreTerminalState' DIE
+-	fi
++	pushtrap '_Msh_readkey_setTerminalState' CONT
++	pushtrap '_Msh_readkey_restoreTerminalState' DIE
+ 	pushtrap '_Msh_readkey_restoreTerminalState' INT
+ 	_Msh_readkey_setTerminalState
+ 	forever do
+@@ -133,10 +131,7 @@
+ 		fi
+ 	done
+ 	_Msh_readkey_restoreTerminalState
+-	if not isset -i; then
+-		poptrap CONT DIE
+-	fi
+-	poptrap INT
++	poptrap CONT DIE INT
+ 
+ 	# Store the result into the given variable and return successfully if it's not empty.
+ 	eval "$1=\${_Msh_rK_c}"

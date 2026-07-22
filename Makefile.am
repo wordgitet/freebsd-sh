@@ -9,8 +9,9 @@ EXTRA_DIST = README UPSTREAM.md AGENTS.md \
 
 TESTEE ?= $(top_builddir)/src/neoash
 TIMEOUT ?= 160s
+MODERNISH_TEST_FLAGS ?= -qq
 
-.PHONY: test-posix test-posix-nosignal test-posix-report test-posix-nosignal-report test-posix-freebsd test-posix-yash test-posix-smoosh test-primary test-guardrail clean-test-posix
+.PHONY: test-posix test-posix-nosignal test-posix-report test-posix-nosignal-report test-posix-freebsd test-posix-yash test-posix-smoosh test-posix-modernish test-primary test-guardrail clean-test-posix
 
 test-posix: test-posix-yash
 
@@ -37,6 +38,11 @@ test-posix-yash:
 test-posix-smoosh:
 	$(MAKE) -C test-posix/smoosh TESTEE='$(abspath $(TESTEE))' \
 		TEST_TIMEOUT='5' test-posix
+
+test-posix-modernish:
+	$(MAKE) -C test-posix/modernish TESTEE='$(abspath $(TESTEE))' \
+		TESTEE_FLAGS='$(TESTEE_FLAGS)' \
+		MODERNISH_TEST_FLAGS='$(MODERNISH_TEST_FLAGS)' test-posix
 
 test-primary: test-posix-report
 

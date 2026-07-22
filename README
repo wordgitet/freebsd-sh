@@ -14,6 +14,10 @@ gate for the project. The imported FreeBSD sh regression suite under
 test-posix/freebsd is a secondary guardrail used to catch accidental
 breakage while POSIX fixes land.
 
+The Modernish suite under test-posix/modernish is an additional diagnostic
+suite. Its bug and quirk reports help find portability issues, but do not
+override the POSIX specification or the yash gate.
+
 When POSIX behavior conflicts with historical FreeBSD behavior, POSIX
 wins by default. Yash behavior and the POSIX text are the main
 day-to-day reference points for compliance work. Dash may be useful as
@@ -53,6 +57,10 @@ $ make TESTEE=./src/neoash test-posix-nosignal-report
 Secondary FreeBSD guardrail:
 
 $ make TESTEE=./src/neoash test-posix-freebsd
+
+Additional Modernish diagnostics:
+
+$ make TESTEE=./src/neoash test-posix-modernish
 
 Convenience aliases:
 

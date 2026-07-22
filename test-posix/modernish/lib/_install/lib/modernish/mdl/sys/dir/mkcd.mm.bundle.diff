@@ -1,0 +1,14 @@
+--- lib/modernish/mdl/sys/dir/mkcd.mm	2020-02-06 04:33:54.000000000 +0000
++++ lib/modernish/mdl/sys/dir/mkcd.mm	2020-02-09 02:10:28.000000000 +0000
+@@ -33,10 +33,7 @@
+ 	( * )	set -- "./$1" ;;
+ 	esac
+ 	# When running a script, use -P to resolve symlinks as this is more secure.
+-	case $- in
+-	( *i* )	CDPATH='' command cd -- "$1" ;;
+-	( * )	CDPATH='' command cd -P -- "$1" ;;
+-	esac || die "mkcd: cd failed"
++	CDPATH='' command cd -P -- "$1" || die "mkcd: cd failed"
+ }
+ 
+ if thisshellhas ROFUNC; then
