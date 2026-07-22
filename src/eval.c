@@ -988,6 +988,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	int delayed_assigns;
 	int path_override;
 	volatile int saveloopnest;
+	static const char path_assignment[] = "PATH=";
 	const char *path = pathval();
 	int i;
 
@@ -1008,7 +1009,14 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	appendarglist(&arglist, nullstr);
 	for (argp = cmd->ncmd.args ; argp ; argp = argp->narg.next) {
 		if (varflag && isassignment(argp->narg.text)) {
-			if (varflag == 1 && !argp->narg.simple) {
+			/*
+			 * PATH controls command lookup, so expand it before lookup
+			 * even when other expandable assignments are delayed until
+			 * after redirections.
+			 */
+			if (varflag == 1 && !argp->narg.simple &&
+			    strncmp(argp->narg.text, path_assignment,
+			    sizeof(path_assignment) - 1) != 0) {
 				delayed_assigns++;
 				continue;
 			}
@@ -1067,7 +1075,6 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		cmdentry.u.index = BLTINCMD;
 		cmdentry.special = 0;
 	} else {
-		static const char PATH[] = "PATH=";
 		int cmd_flags = 0, bltinonly = 0;
 
 		/*
@@ -1075,8 +1082,9 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		 * is present
 		 */
 		for (i = 0; i < varlist.count; i++)
-			if (strncmp(varlist.args[i], PATH, sizeof(PATH) - 1) == 0) {
-				path = varlist.args[i] + sizeof(PATH) - 1;
+			if (strncmp(varlist.args[i], path_assignment,
+			    sizeof(path_assignment) - 1) == 0) {
+				path = varlist.args[i] + sizeof(path_assignment) - 1;
 				path_override = 1;
 				/*
 				 * On `PATH=... command`, we need to make

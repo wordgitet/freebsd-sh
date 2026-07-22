@@ -210,6 +210,18 @@ test_O -d -e 127 'PATH is searched after assignments (pwd)'
 PATH=./dir3 pwd
 __IN__
 
+test_oE -e 0 'expanded PATH assignment affects command lookup'
+saved_path=$PATH
+tempdir=.path-expanded-$$
+PATH=/dev/null
+PATH=$saved_path command mkdir "$tempdir"
+status=$?
+PATH=$saved_path command rmdir "$tempdir" 2>/dev/null || :
+printf '%s\n' "$status"
+__IN__
+0
+__OUT__
+
 test_o 'command name with slash'
 dir2/ext_cmd foo bar baz
 __IN__
