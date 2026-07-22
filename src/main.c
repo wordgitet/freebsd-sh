@@ -175,7 +175,7 @@ state3:
 	state = 4;
 	popstackmark(&smark2);
 	if (minusc) {
-		evalstring(minusc, sflag ? 0 : EV_EXIT);
+		evalstring(minusc, sflag || iflag ? 0 : EV_EXIT);
 	}
 state4:
 	if (sflag || minusc == NULL) {

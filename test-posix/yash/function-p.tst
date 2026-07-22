@@ -90,6 +90,20 @@ END
 func
 __IN__
 
+test_oE 'redirections expand before function assignments'
+func() { echo "${EFF-unset}"; }
+unset x
+EFF=${x=assign} func 2>${x=redir}
+echo "${EFF-unset}"
+test -f redir && echo redir
+test ! -e assign && echo no-assign
+__IN__
+redir
+unset
+redir
+no-assign
+__OUT__
+
 test_oE '$# in function'
 func() { echo $#; }
 func

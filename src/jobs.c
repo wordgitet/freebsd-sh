@@ -588,7 +588,7 @@ waitcmdloop(struct job *job)
 				if (WIFEXITED(status))
 					retval = WEXITSTATUS(status);
 				else
-					retval = exitsigstatus(WTERMSIG(status));
+					retval = WTERMSIG(status) + 128;
 				freejob(job);
 				return retval;
 			}
@@ -611,7 +611,7 @@ waitcmdloop(struct job *job)
 
 	sig = pendingsig_waitcmd;
 	pendingsig_waitcmd = 0;
-	return exitsigstatus(sig);
+	return sig + 128;
 }
 
 

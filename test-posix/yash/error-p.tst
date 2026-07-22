@@ -95,6 +95,12 @@ __IN__
 0
 __OUT__
 
+test_o -d 'expansion error spares interactive -c shell' -i -c \
+    'unset a; echo ${a?}; echo reached; exit'
+__IN__
+reached
+__OUT__
+
 test_O -d -e 127 'command not found'
 ./_no_such_command_
 __IN__

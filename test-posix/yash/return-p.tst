@@ -155,6 +155,12 @@ __IN__
 trapped 19
 __OUT__
 
+test_oE -e 0 'default return status follows the preceding trap command'
+trap 'fn() { false; return; }; fn; echo trapped $?' EXIT
+__IN__
+trapped 1
+__OUT__
+
 # Local note: freebsd-sh implements this case, so keep it as a normal test.
 test_oE -e 0 'default exit status in trap in function'
 trap '(exit 1); return; echo X $?' INT

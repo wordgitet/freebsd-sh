@@ -2,7 +2,7 @@
 
 : ${LINE_LENGTH:=70}
 
-: ${TEST_TIME:=$(date "+%Y-%m-%d_%H:%M")}
+: ${TEST_TIME:=$(date "+%Y-%m-%d_%H:%M")-$$}
 TEST_SCRIPT=${0##*/}
 
 cleanup () {
@@ -130,6 +130,7 @@ do
     got_err=${prefix}.err
 
     # actually run the test
+    rm -f ${got_timeout}
     TMP=$(mktemp -d)
     cd $TMP
     ${TEST_UTIL}/timeout -t ${TEST_TIMEOUT-5} -l ${got_timeout} \

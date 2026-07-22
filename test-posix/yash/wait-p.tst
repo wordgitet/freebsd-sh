@@ -118,4 +118,16 @@ USR1
 waited 0
 __OUT__
 
+test_oE 'waiting for signalled jobs returns conventional statuses' -m
+../selfsig 15 & term=$!
+../selfsig 3 & quit=$!
+wait "$term"
+echo TERM:$?
+wait "$quit"
+echo QUIT:$?
+__IN__
+TERM:143
+QUIT:131
+__OUT__
+
 # vim: set ft=sh ts=8 sts=4 sw=4 et:

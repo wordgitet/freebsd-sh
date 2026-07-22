@@ -190,7 +190,10 @@ void
 evaltree(union node *n, int flags)
 {
 	int do_etest;
+	int e;
 	union node *next;
+	struct jmploc jmploc;
+	struct jmploc *savehandler;
 	struct stackmark smark;
 
 	setstackmark(&smark);
@@ -211,7 +214,23 @@ evaltree(union node *n, int flags)
 		TRACE(("evaltree(%p: %d) called\n", (void *)n, n->type));
 		switch (n->type) {
 		case NSEMI:
-			evaltree(n->nbinary.ch1, flags & ~EV_EXIT);
+			if (iflag && rootshell) {
+				savehandler = handler;
+				if (setjmp(jmploc.loc)) {
+					e = exception;
+					handler = savehandler;
+					if (e != EXERROR)
+						longjmp(handler->loc, 1);
+					reseteval();
+					popstackmark(&smark);
+					setstackmark(&smark);
+				} else {
+					handler = &jmploc;
+					evaltree(n->nbinary.ch1, flags & ~EV_EXIT);
+					handler = savehandler;
+				}
+			} else
+				evaltree(n->nbinary.ch1, flags & ~EV_EXIT);
 			if (evalskip)
 				goto out;
 			next = n->nbinary.ch2;
@@ -989,7 +1008,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	appendarglist(&arglist, nullstr);
 	for (argp = cmd->ncmd.args ; argp ; argp = argp->narg.next) {
 		if (varflag && isassignment(argp->narg.text)) {
-			if (varflag == 1 && argp->narg.backquote != NULL) {
+			if (varflag == 1 && !argp->narg.simple) {
 				delayed_assigns++;
 				continue;
 			}
@@ -1151,7 +1170,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		for (argp = cmd->ncmd.args ; argp ; argp = argp->narg.next) {
 			if (!isassignment(argp->narg.text))
 				break;
-			if (argp->narg.backquote == NULL)
+			if (argp->narg.simple)
 				continue;
 			expandarg(argp, &varlist, EXP_VARTILDE);
 			had_cmdsub = 1;
@@ -1170,7 +1189,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		for (argp = cmd->ncmd.args ; argp ; argp = argp->narg.next) {
 			if (!isassignment(argp->narg.text))
 				break;
-			if (argp->narg.backquote == NULL)
+			if (argp->narg.simple)
 				continue;
 			expandarg(argp, &varlist, EXP_VARTILDE);
 			had_cmdsub = 1;

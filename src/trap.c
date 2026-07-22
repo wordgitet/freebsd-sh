@@ -621,7 +621,10 @@ setinteractive(void)
 int
 gettrapstatus(void)
 {
-	return trap_saved_active && rootshell ? trap_saved_status : -1;
+	/* EXIT traps use the status of their most recent command. */
+	if (trap_saved_active && rootshell && last_trapsig != 0)
+		return trap_saved_status;
+	return -1;
 }
 
 
