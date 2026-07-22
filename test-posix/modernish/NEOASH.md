@@ -14,6 +14,9 @@ Run it from the repository root with:
 
     make TESTEE=./src/neoash test-posix-modernish
 
+The runner sets `MSH_SHELL` to `TESTEE`, preventing modernish from choosing a
+different shell from `PATH` during its startup probe.
+
 Modernish diagnoses implementation bugs, quirks, and optional capabilities.
 Its result is supplementary diagnostic evidence: the yash POSIX suite remains
 neoash's release-blocking correctness gate.

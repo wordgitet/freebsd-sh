@@ -7,4 +7,4 @@ MODERNISH_TEST_FLAGS ?= -qq
 .PHONY: test-posix
 
 test-posix:
-	$(TESTEE) $(TESTEE_FLAGS) bin/modernish --test $(MODERNISH_TEST_FLAGS)
+	MSH_SHELL='$(TESTEE)' $(TESTEE) $(TESTEE_FLAGS) bin/modernish --test $(MODERNISH_TEST_FLAGS)

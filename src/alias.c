@@ -193,7 +193,7 @@ printaliases(void)
 int
 aliascmd(int argc __unused, char **argv __unused)
 {
-	char *n, *v;
+	char *n, *name, *v;
 	int ret = 0;
 	struct alias *ap;
 
@@ -216,8 +216,19 @@ aliascmd(int argc __unused, char **argv __unused)
 			} else
 				printalias(ap);
 		else {
-			*v++ = '\0';
-			setalias(n, v);
+			/*
+			 * argv can point into a function's retained parse tree.
+			 * Do not split it in place: doing so turns "name=value"
+			 * into "name" on the function's next invocation.
+			 */
+			INTOFF;
+			name = savestr(n);
+			INTON;
+			name[v - n] = '\0';
+			setalias(name, v + 1);
+			INTOFF;
+			ckfree(name);
+			INTON;
 		}
 	}
 

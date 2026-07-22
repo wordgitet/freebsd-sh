@@ -31,6 +31,17 @@ __IN__
 BCD
 __OUT__
 
+test_OE -e 0 'defining aliases in a repeatedly invoked function'
+f() {
+	command alias _alias_function_probe=:
+	command alias _alias_function_probe >/dev/null || return
+	command unalias _alias_function_probe
+}
+set -a
+f && f
+set +a
+__IN__
+
 test_OE -e 0 'removing specific alias - exit status'
 alias true=false
 unalias true
