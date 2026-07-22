@@ -135,6 +135,11 @@ evalcmd(int argc, char **argv)
                         STPUTC('\0', concat);
                         p = grabstackstr(concat);
                 }
+		/*
+		 * The evaluated text sees the status that preceded eval.
+		 * evalcommand() clears exitstatus before entering this builtin.
+		 */
+		exitstatus = oexitstatus;
                 evalstring(p, builtin_flags);
         } else
                 exitstatus = 0;

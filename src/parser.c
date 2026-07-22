@@ -102,6 +102,7 @@ static struct heredoc *heredoc;
 static int quoteflag;		/* set if (part of) last token was quoted */
 static int startlinno;		/* line # where last token started */
 static int funclinno;		/* line # where the current function started */
+static int funcaliases;		/* function body has changed aliases */
 static struct parser_temp *parser_temp;
 static const char *const *checkkwd_override;
 static int suppressalias;
@@ -838,6 +839,14 @@ simplecmd(union node **rpp, union node *redir)
 	for (;;) {
 		checkkwd = savecheckkwd;
 		if (readtoken() == TWORD) {
+			if (funclinno != 0 && args == NULL &&
+			    equal(wordtext, "alias"))
+				funcaliases = 1;
+			else if (funclinno != 0 && args != NULL &&
+			    args->narg.next == NULL &&
+			    equal(args->narg.text, "command") &&
+			    equal(wordtext, "alias"))
+				funcaliases = 1;
 			n = makename();
 			*app = n;
 			app = &n->narg.next;
@@ -849,9 +858,15 @@ simplecmd(union node **rpp, union node *redir)
 			parsefname();	/* read name of redirection file */
 		} else if (lasttoken == TLP && app == &args->narg.next
 					    && rpp == orig_rpp) {
+			int savefunclinno;
+			int savefuncaliases;
+
 			/* We have a function */
 			consumetoken(TRP);
+			savefunclinno = funclinno;
+			savefuncaliases = funcaliases;
 			funclinno = plinno;
+			funcaliases = 0;
 			/*
 			 * - Require plain text.
 			 * - Functions with '/' cannot be called.
@@ -866,7 +881,8 @@ simplecmd(union node **rpp, union node *redir)
 			rmescapes(n->narg.text);
 			n->type = NDEFUN;
 			n->narg.next = command();
-			funclinno = 0;
+			funclinno = savefunclinno;
+			funcaliases = savefuncaliases;
 			return n;
 		} else {
 			tokpushback++;
@@ -879,6 +895,11 @@ simplecmd(union node **rpp, union node *redir)
 	n->type = NCMD;
 	n->ncmd.args = args;
 	n->ncmd.redirect = redir;
+	if (funclinno != 0 && args != NULL &&
+	    (equal(args->narg.text, "alias") ||
+	    (equal(args->narg.text, "command") && args->narg.next != NULL &&
+	    equal(args->narg.next->narg.text, "alias"))))
+		funcaliases = 1;
 	return n;
 }
 
@@ -1299,12 +1320,14 @@ parsebackq(char *out, struct nodelist **pbqlist,
 	size_t savelen;
 	const int bq_startlinno = plinno;
 	char *volatile ostr = NULL;
+	int defer_bq_alias;
 	int suppress_bq_alias;
 	struct parsefile *const savetopfile = getcurrentfile();
 	struct heredoc *const saveheredoclist = heredoclist;
 	struct heredoc *here;
 
 	str = NULL;
+	defer_bq_alias = 0;
 	suppress_bq_alias = 0;
 	if (setjmp(jmploc.loc)) {
 		popfilesupto(savetopfile);
@@ -1402,7 +1425,8 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		int stash_tree;
 		union node *wrapper;
 
-		if (funclinno != 0) {
+		if (funclinno != 0 && (funcaliases || dblquote)) {
+			defer_bq_alias = 1;
 			suppressalias++;
 			suppress_bq_alias = 1;
 		}
@@ -1411,10 +1435,10 @@ parsebackq(char *out, struct nodelist **pbqlist,
 		lossy = 0;
 		safe = 1;
 		stash_tree = 0;
-		if (suppress_bq_alias ||
+		if (defer_bq_alias ||
 		    (plinno != bq_startlinno && n != NULL && n->type == NSEMI &&
 		    cmdsubstsafe(n, &lossy))) {
-			if (suppress_bq_alias) {
+			if (defer_bq_alias) {
 				safe = cmdsubstsafe(n, &lossy);
 				suppressalias--;
 				suppress_bq_alias = 0;

@@ -168,11 +168,16 @@ stputs_pattern(const char *data, char *p)
 	while ((c = *data++) != '\0') {
 		CHECKSTRSPACE(3, p);
 		if (c == '\\') {
-			USTPUTC(CTLESC, p);
-			if (*data != '\0')
-				USTPUTC(*data++, p);
-			else
+			if (*data == '\\') {
 				USTPUTC('\\', p);
+				data++;
+			} else {
+				USTPUTC(CTLESC, p);
+				if (*data != '\0')
+					USTPUTC(*data++, p);
+				else
+					USTPUTC('\\', p);
+			}
 			continue;
 		}
 		if (BASESYNTAX[(int)c] == CCTL)

@@ -37,6 +37,13 @@ test_OE -e 23 'exit status of evaluation'
 eval '(exit 23)'
 __IN__
 
+test_oE 'status before evaluation'
+false
+eval 'printf "%s\n" "$?"'
+__IN__
+1
+__OUT__
+
 test_oE -e 0 'effect on environment in evaluation'
 a=foo
 eval 'a=bar'

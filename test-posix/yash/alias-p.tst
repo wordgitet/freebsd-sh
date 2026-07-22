@@ -42,6 +42,17 @@ f && f
 set +a
 __IN__
 
+test_oE 'expanding an alias in a redirected function command substitution'
+alias _alias_cmdsub_probe=echo
+f() {
+	value=$(_alias_cmdsub_probe "$@" 8<&0)
+	printf '<%s>\n' "$value"
+}
+f hello
+__IN__
+<hello>
+__OUT__
+
 test_OE -e 0 'removing specific alias - exit status'
 alias true=false
 unalias true
