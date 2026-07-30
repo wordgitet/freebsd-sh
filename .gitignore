@@ -47,6 +47,7 @@
 /src/token.h
 
 /compile_commands.json
+/private/
 /*.swp
 /*.swo
 /test-posix/yash/*.trs
