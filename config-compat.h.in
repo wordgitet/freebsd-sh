@@ -47,6 +47,9 @@
 /* Define to 1 if you have the <minix/config.h> header file. */
 #undef HAVE_MINIX_CONFIG_H
 
+/* Define to 1 if you have the 'open_memstream' function. */
+#undef HAVE_OPEN_MEMSTREAM
+
 /* Define to 1 if you have the <paths.h> header file. */
 #undef HAVE_PATHS_H
 
@@ -85,6 +88,9 @@
 
 /* Define to 1 if you have the 'strtoq' function. */
 #undef HAVE_STRTOQ
+
+/* Define to 1 if 'd_type' is a member of 'struct dirent'. */
+#undef HAVE_STRUCT_DIRENT_D_TYPE
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H

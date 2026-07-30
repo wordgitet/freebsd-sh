@@ -555,13 +555,24 @@ bindcmd(int argc, char **argv)
 	int ret;
 	FILE *old;
 	FILE *out;
+#if !defined(HAVE_FUNOPEN) && !defined(HAVE_FOPENCOOKIE) && \
+    defined(HAVE_OPEN_MEMSTREAM)
+	char *outbuf = NULL;
+	size_t outlen = 0;
+#endif
 
 	if (el == NULL)
 		error("line editing is disabled");
 
 	INTOFF;
 
+#if defined(HAVE_FUNOPEN) || defined(HAVE_FOPENCOOKIE)
 	out = out1fp();
+#elif defined(HAVE_OPEN_MEMSTREAM)
+	out = open_memstream(&outbuf, &outlen);
+#else
+	out = NULL;
+#endif
 	if (out == NULL)
 		error("Out of space");
 
@@ -573,6 +584,12 @@ bindcmd(int argc, char **argv)
 	el_set(el, EL_SETFP, 1, old);
 
 	fclose(out);
+
+#if !defined(HAVE_FUNOPEN) && !defined(HAVE_FOPENCOOKIE) && \
+    defined(HAVE_OPEN_MEMSTREAM)
+	outbin(outbuf, outlen, out1);
+	free(outbuf);
+#endif
 
 	if (argc > 1 && argv[1][0] == '-' &&
 	    memchr("ve", argv[1][1], 2) != NULL) {
@@ -654,13 +671,18 @@ static char
 
 			if (strncmp(entry->d_name, text, curpos) != 0)
 				continue;
+			/* illumos does not provide the optional dirent d_type field. */
+#ifdef HAVE_STRUCT_DIRENT_D_TYPE
 			if (entry->d_type == DT_UNKNOWN || entry->d_type == DT_LNK) {
+#endif
 				if (fstatat(dfd, entry->d_name, &statb, 0) == -1)
 					continue;
 				if (!S_ISREG(statb.st_mode))
 					continue;
+			#ifdef HAVE_STRUCT_DIRENT_D_TYPE
 			} else if (entry->d_type != DT_REG)
 				continue;
+			#endif
 			rmatches = add_match(matches, ++i, &size,
 				strdup(entry->d_name));
 			if (rmatches == NULL) {

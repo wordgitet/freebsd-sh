@@ -1,4 +1,4 @@
-AC_INIT([neoash], [15.1-ver8])
+AC_INIT([neoash], [15.1-ver9])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config-compat.h])
@@ -39,9 +39,10 @@ dnl Checks for header files.
 AC_CHECK_HEADERS([sys/stat.h sys/types.h unistd.h string.h stdlib.h limits.h err.h paths.h])
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS([strtoq strlcpy strlcat strtonum reallocf reallocarray errc warnc asprintf vasprintf getprogname wait3 eaccess faccessat funopen fopencookie])
+AC_CHECK_FUNCS([strtoq strlcpy strlcat strtonum reallocf reallocarray errc warnc asprintf vasprintf getprogname wait3 eaccess faccessat funopen fopencookie open_memstream])
 AC_CHECK_DECLS([reallocarray], [], [], [[#include <stdlib.h>]])
 AC_CHECK_DECLS([strchrnul], [], [], [[#include <string.h>]])
+AC_CHECK_MEMBERS([struct dirent.d_type], [], [], [[#include <dirent.h>]])
 
 dnl Check for strchrnul respecting availability on macOS
 AC_MSG_CHECKING([for working strchrnul])

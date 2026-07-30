@@ -33,6 +33,7 @@
  */
 
 #include <sys/param.h>
+#include <limits.h>
 #include "shell.h"
 #include "output.h"
 #include "memalloc.h"

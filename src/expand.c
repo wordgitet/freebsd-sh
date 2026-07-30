@@ -1222,10 +1222,16 @@ expmeta(char *enddir, char *name, struct arglist *arglist)
 			if (atend)
 				appendarglist(arglist, stsavestr(expdir));
 			else {
+				/*
+				 * d_type is an optional extension.  Without it, recurse
+				 * and let opendir() reject entries that are not directories.
+				 */
+#ifdef HAVE_STRUCT_DIRENT_D_TYPE
 				if (dp->d_type != DT_UNKNOWN &&
 				    dp->d_type != DT_DIR &&
 				    dp->d_type != DT_LNK)
 					continue;
+#endif
 				if (enddir + namlen + 2 > expdir_end)
 					continue;
 				enddir[namlen] = '/';

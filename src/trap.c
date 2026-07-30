@@ -88,7 +88,9 @@ static int last_trapsig;
 static int exiting;		/* exitshell() has been called */
 static int exiting_exitstatus;	/* value passed to exitshell() */
 
-static int getsigaction(int, sig_t *);
+typedef void (*sh_sighandler_t)(int);
+
+static int getsigaction(int, sh_sighandler_t *);
 static int exitsig(int);
 static int
 is_tty_stopsig(int signo)
@@ -335,7 +337,7 @@ void
 setsignal(int signo)
 {
 	int action;
-	sig_t sigact = SIG_DFL;
+	sh_sighandler_t sigact = SIG_DFL;
 	struct sigaction sa;
 	char *t;
 
@@ -430,13 +432,13 @@ setsignal(int signo)
  * Return the current setting for sig w/o changing it.
  */
 static int
-getsigaction(int signo, sig_t *sigact)
+getsigaction(int signo, sh_sighandler_t *sigact)
 {
 	struct sigaction sa;
 
 	if (sigaction(signo, (struct sigaction *)0, &sa) == -1)
 		return 0;
-	*sigact = (sig_t) sa.sa_handler;
+	*sigact = sa.sa_handler;
 	return 1;
 }
 

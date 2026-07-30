@@ -342,7 +342,18 @@ static cookie_io_functions_t func = {
     .close = NULL
 };
 #else
-#error "Platform must support either funopen or fopencookie"
+static void
+doformat_vasprintf(struct output *dest, const char *f, va_list ap)
+{
+	char *buf;
+	int len;
+
+	len = vasprintf(&buf, f, ap);
+	if (len >= 0) {
+		outbin(buf, len, dest);
+		free(buf);
+	}
+}
 #endif
 
 void
@@ -355,9 +366,15 @@ doformat(struct output *dest, const char *f, va_list ap)
 #elif defined(HAVE_FOPENCOOKIE)
 	if ((fp = fopencookie(dest, "a", func)) != NULL) {
 #endif
+
+#if defined(HAVE_FUNOPEN) || defined(HAVE_FOPENCOOKIE)
 		vfprintf(fp, f, ap);
 		fclose(fp);
 	}
+
+#else
+	doformat_vasprintf(dest, f, ap);
+#endif
 }
 
 FILE *
@@ -367,6 +384,8 @@ out1fp(void)
 	return funopen(out1, NULL, doformat_wr_funopen, NULL, NULL);
 #elif defined(HAVE_FOPENCOOKIE)
 	return fopencookie(out1, "a", func);
+#else
+	return NULL;
 #endif
 }
 
