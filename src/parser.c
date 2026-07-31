@@ -779,8 +779,6 @@ command(void)
 		n1 = simplecmd(rpp, redir);
 		return n1;
 	case TBLANK:
-		if (redir)
-			synexpect(-1);
 		return NULL;
 	case TWORD:
 		tokpushback++;

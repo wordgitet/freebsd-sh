@@ -992,6 +992,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	int had_cmdsub;
 	int delayed_assigns;
 	int path_override;
+	int cmdsub_status;
 	volatile int saveloopnest;
 	static const char path_assignment[] = "PATH=";
 	const char *path = pathval();
@@ -1072,6 +1073,8 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	/* Print the command if xflag is set. */
 	if (xflag)
 		xtracecommand(&varlist, argc, argv);
+
+	cmdsub_status = exitstatus;
 
 	/* Now locate the command. */
 	if (argc == 0) {
@@ -1370,6 +1373,8 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		nextopt_optptr = NULL;		/* initialize nextopt */
 		builtin_flags = flags;
 		exitstatus = (*builtinfunc[cmdentry.u.index])(argc, argv);
+		if (argc == 0 && had_cmdsub)
+			exitstatus = cmdsub_status;
 		flushall();
 		if (outiserror(out1)) {
 			warning("write error on stdout");

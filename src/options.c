@@ -100,6 +100,8 @@ procargs(int argc, char **argv)
 	}
 	if (mflag == 2)
 		mflag = iflag && isatty(0);
+	if (hflag == 2)
+		hflag = 1;
 	for (i = 0; i < NOPTS; i++)
 		if (optval[i] == 2)
 			optval[i] = 0;

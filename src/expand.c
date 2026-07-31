@@ -992,6 +992,8 @@ varvalue(const char *name, int quoted, int subtype, int flag,
 		break;
 	case '?':
 		num = oexitstatus;
+		if (num >= 384)
+			num -= 256;
 		break;
 	case '#':
 		num = shellparam.nparam;
