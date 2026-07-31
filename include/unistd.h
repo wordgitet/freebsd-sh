@@ -39,8 +39,14 @@
  * some other systems lack eaccess but provide faccessat(2) which we can
  * use to implement the same semantics with AT_EACCESS.
  */
-#if !defined(HAVE_EACCESS) && defined(HAVE_FACCESSAT)
+#if (!defined(HAVE_EACCESS) || defined(__sun) || defined(__sun__)) && defined(HAVE_FACCESSAT)
 #include <fcntl.h>
+#ifndef AT_FDCWD
+#define AT_FDCWD -100
+#endif
+#ifndef AT_EACCESS
+#define AT_EACCESS 0x4
+#endif
 #define eaccess(path, mode) faccessat(AT_FDCWD, (path), (mode), AT_EACCESS)
 #endif
 

@@ -1233,7 +1233,7 @@ expmeta(char *enddir, char *name, struct arglist *arglist)
 				 * d_type is an optional extension.  Without it, recurse
 				 * and let opendir() reject entries that are not directories.
 				 */
-#ifdef HAVE_STRUCT_DIRENT_D_TYPE
+#if defined(HAVE_STRUCT_DIRENT_D_TYPE) && defined(DT_DIR)
 				if (dp->d_type != DT_UNKNOWN &&
 				    dp->d_type != DT_DIR &&
 				    dp->d_type != DT_LNK)

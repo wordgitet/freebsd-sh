@@ -672,14 +672,14 @@ static char
 			if (strncmp(entry->d_name, text, curpos) != 0)
 				continue;
 			/* illumos does not provide the optional dirent d_type field. */
-#ifdef HAVE_STRUCT_DIRENT_D_TYPE
+#if defined(HAVE_STRUCT_DIRENT_D_TYPE) && defined(DT_REG)
 			if (entry->d_type == DT_UNKNOWN || entry->d_type == DT_LNK) {
 #endif
 				if (fstatat(dfd, entry->d_name, &statb, 0) == -1)
 					continue;
 				if (!S_ISREG(statb.st_mode))
 					continue;
-			#ifdef HAVE_STRUCT_DIRENT_D_TYPE
+			#if defined(HAVE_STRUCT_DIRENT_D_TYPE) && defined(DT_REG)
 			} else if (entry->d_type != DT_REG)
 				continue;
 			#endif

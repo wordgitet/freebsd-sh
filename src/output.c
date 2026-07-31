@@ -323,7 +323,7 @@ doformat_wr_funopen(void *cookie, const char *buf, int len)
 
 	return (len);
 }
-#elif defined(HAVE_FOPENCOOKIE)
+#elif defined(HAVE_FOPENCOOKIE) && !defined(__sun) && !defined(__sun__)
 static ssize_t
 doformat_wr_fopencookie(void *cookie, const char *buf, size_t len)
 {
@@ -337,11 +337,9 @@ doformat_wr_fopencookie(void *cookie, const char *buf, size_t len)
 
 static cookie_io_functions_t func = {
     .write = doformat_wr_fopencookie,
-    .read = NULL,
-    .seek = NULL,
-    .close = NULL
 };
-#else
+#endif
+
 static void
 doformat_vasprintf(struct output *dest, const char *f, va_list ap)
 {
@@ -354,7 +352,6 @@ doformat_vasprintf(struct output *dest, const char *f, va_list ap)
 		free(buf);
 	}
 }
-#endif
 
 void
 doformat(struct output *dest, const char *f, va_list ap)
@@ -363,11 +360,11 @@ doformat(struct output *dest, const char *f, va_list ap)
 
 #if defined(HAVE_FUNOPEN)
 	if ((fp = funopen(dest, NULL, doformat_wr_funopen, NULL, NULL)) != NULL) {
-#elif defined(HAVE_FOPENCOOKIE)
+#elif defined(HAVE_FOPENCOOKIE) && !defined(__sun) && !defined(__sun__)
 	if ((fp = fopencookie(dest, "a", func)) != NULL) {
 #endif
 
-#if defined(HAVE_FUNOPEN) || defined(HAVE_FOPENCOOKIE)
+#if defined(HAVE_FUNOPEN) || (defined(HAVE_FOPENCOOKIE) && !defined(__sun) && !defined(__sun__))
 		vfprintf(fp, f, ap);
 		fclose(fp);
 	}
@@ -382,7 +379,7 @@ out1fp(void)
 {
 #if defined(HAVE_FUNOPEN)
 	return funopen(out1, NULL, doformat_wr_funopen, NULL, NULL);
-#elif defined(HAVE_FOPENCOOKIE)
+#elif defined(HAVE_FOPENCOOKIE) && !defined(__sun) && !defined(__sun__)
 	return fopencookie(out1, "a", func);
 #else
 	return NULL;

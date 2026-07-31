@@ -119,7 +119,7 @@ static inline void warnx(const char *fmt, ...) {
 extern "C" {
 #endif
 
-#ifndef HAVE_ERRC
+#if !defined(HAVE_ERRC) && !defined(__sun) && !defined(__sun__)
 static inline void errc(int eval, int code, const char *fmt, ...) {
     va_list ap;
     fprintf(stderr, "%s: ", getprogname());
@@ -134,7 +134,7 @@ static inline void errc(int eval, int code, const char *fmt, ...) {
 }
 #endif
 
-#ifndef HAVE_WARNC
+#if !defined(HAVE_WARNC) && !defined(__sun) && !defined(__sun__)
 static inline void warnc(int code, const char *fmt, ...) {
     va_list ap;
     fprintf(stderr, "%s: ", getprogname());
