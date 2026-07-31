@@ -139,8 +139,10 @@ static void deljob(struct job *);
 static struct job *getcurjob(struct job *);
 #endif
 static int getjobstatus(const struct job *);
-static void printjobcmd(struct job *);
-static void showjob(struct job *, int);
+static void printjobcmd(struct job *, struct output *);
+static void showjob(struct job *, int, struct output *);
+static void showjobs_output(int, int, struct output *);
+static int showjobs_active;
 
 
 /*
@@ -264,7 +266,7 @@ fgcmd(int argc __unused, char **argv __unused)
 	jp = getjob(*argptr);
 	if (jp->jobctl == 0)
 		error("job not created under job control");
-	printjobcmd(jp);
+	printjobcmd(jp, out1);
 	flushout(&output);
 	pgrp = jp->ps[0].pid;
 	if (ttyfd >= 0)
@@ -297,7 +299,7 @@ bgcmd(int argc __unused, char **argv __unused)
 		backgndpid = jp->ps[jp->nprocs - 1].pid;
 		bgjob = jp;
 		out1fmt("[%td] ", jp - jobtab + 1);
-		printjobcmd(jp);
+		printjobcmd(jp, out1);
 	} while (*argptr != NULL && *++argptr != NULL);
 	return 0;
 }
@@ -350,7 +352,7 @@ jobscmd(int argc __unused, char *argv[] __unused)
 		showjobs(0, mode);
 	else
 		while ((id = *argptr++) != NULL)
-			showjob(getjob(id), mode);
+			showjob(getjob(id), mode, out1);
 
 	return (0);
 }
@@ -370,21 +372,21 @@ static int getjobstatus(const struct job *jp)
 }
 
 static void
-printjobcmd(struct job *jp)
+printjobcmd(struct job *jp, struct output *out)
 {
 	struct procstat *ps;
 	int i;
 
 	for (ps = jp->ps, i = jp->nprocs ; --i >= 0 ; ps++) {
-		out1str(ps->cmd);
+		outstr(ps->cmd, out);
 		if (i > 0)
-			out1str(" | ");
+			outstr(" | ", out);
 	}
-	out1c('\n');
+	outc('\n', out);
 }
 
 static void
-showjob(struct job *jp, int mode)
+showjob(struct job *jp, int mode, struct output *out)
 {
 	char s[64];
 	char statebuf[16];
@@ -440,7 +442,7 @@ showjob(struct job *jp, int mode)
 
 	for (ps = jp->ps ; procno > 0 ; ps++, procno--) { /* for each process */
 		if (mode == SHOWJOBS_PIDS || mode == SHOWJOBS_PGIDS) {
-			out1fmt("%d\n", (int)ps->pid);
+			outfmt(out, "%d\n", (int)ps->pid);
 			continue;
 		}
 		if (mode != SHOWJOBS_VERBOSE && ps != jp->ps)
@@ -455,27 +457,27 @@ showjob(struct job *jp, int mode)
 			fmtstr(s, 64, "[%d] %c ", jobno, c);
 		else
 			fmtstr(s, 64, "    %c ", c);
-		out1str(s);
+		outstr(s, out);
 		col = strlen(s);
 		if (mode == SHOWJOBS_VERBOSE) {
 			fmtstr(s, 64, "%d ", (int)ps->pid);
-			out1str(s);
+			outstr(s, out);
 			col += strlen(s);
 		}
 		if (ps == jp->ps) {
-			out1str(statestr);
-			out1str(coredump);
+			outstr(statestr, out);
+			outstr(coredump, out);
 			col += strlen(statestr) + strlen(coredump);
 		}
 		do {
-			out1c(' ');
+			outc(' ', out);
 			col++;
 		} while (col < 30);
 		if (mode == SHOWJOBS_VERBOSE) {
-			out1str(ps->cmd);
-			out1c('\n');
+			outstr(ps->cmd, out);
+			outc('\n', out);
 		} else
-			printjobcmd(jp);
+			printjobcmd(jp, out);
 	}
 }
 
@@ -488,13 +490,14 @@ showjob(struct job *jp, int mode)
  * will be freed here.
  */
 
-void
-showjobs(int change, int mode)
+static void
+showjobs_output(int change, int mode, struct output *out)
 {
 	int jobno;
 	struct job *jp;
 
 	TRACE(("showjobs(%d) called\n", change));
+	showjobs_active++;
 	checkzombies();
 	for (jobno = 1, jp = jobtab ; jobno <= njobs ; jobno++, jp++) {
 		if (! jp->used)
@@ -505,7 +508,7 @@ showjobs(int change, int mode)
 		}
 		if (change && ! jp->changed)
 			continue;
-		showjob(jp, mode);
+		showjob(jp, mode, out);
 		if (mode == SHOWJOBS_DEFAULT || mode == SHOWJOBS_VERBOSE) {
 			jp->changed = 0;
 			/* Hack: discard jobs for which $! has not been
@@ -517,6 +520,13 @@ showjobs(int change, int mode)
 			}
 		}
 	}
+	showjobs_active--;
+}
+
+void
+showjobs(int change, int mode)
+{
+	showjobs_output(change, mode, out1);
 }
 
 
@@ -1323,8 +1333,13 @@ dowait(int mode, struct job *job)
 	} else {
 		TRACE(("Not printing status, rootshell=%d, job=%p\n", rootshell, job));
 		if (!(thisjob == job && thisjob->foreground &&
-		    thisjob->state == JOBSTOPPED))
+		    thisjob->state == JOBSTOPPED)) {
 			thisjob->changed = 1;
+			if (iflag && bflag && !showjobs_active) {
+				showjobs_output(1, SHOWJOBS_DEFAULT, out2);
+				flushout(out2);
+			}
+		}
 	}
 	return pid;
 }
