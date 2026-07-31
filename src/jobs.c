@@ -159,15 +159,10 @@ jobctl_notty(void)
 		close(ttyfd);
 		ttyfd = -1;
 	}
-	if (!iflag) {
-		setsignal(SIGTSTP);
-		setsignal(SIGTTOU);
-		setsignal(SIGTTIN);
-		jobctl = 1;
-		return;
-	}
-	out2fmt_flush("sh: can't access tty; job control turned off\n");
-	mflag = 0;
+	setsignal(SIGTSTP);
+	setsignal(SIGTTOU);
+	setsignal(SIGTTIN);
+	jobctl = 1;
 }
 
 static int
@@ -1360,7 +1355,7 @@ dowait(int mode, struct job *job)
 		if (!(thisjob == job && thisjob->foreground &&
 		    thisjob->state == JOBSTOPPED)) {
 			thisjob->changed = 1;
-			if (iflag && bflag && !showjobs_active) {
+			if (bflag && !showjobs_active) {
 				showjobs_output(1, SHOWJOBS_DEFAULT, out2);
 				flushout(out2);
 			}
