@@ -2,7 +2,7 @@
 .SUFFIXES: .c .h .o .tst .trs
 
 YASH ?= $(shell command -v yash 2>/dev/null)
-TESTEE ?= ../../build/src/sh
+TESTEE ?= ../../src/neoash
 TIMEOUT ?= 160s
 TIMEOUT_CMD ?= $(shell command -v timeout >/dev/null 2>&1 && echo "timeout $(TIMEOUT)" || (command -v gtimeout >/dev/null 2>&1 && echo "gtimeout $(TIMEOUT)" || echo ""))
 CC ?= cc

@@ -389,7 +389,7 @@ static void
 showjob(struct job *jp, int mode, struct output *out)
 {
 	char s[64];
-	char statebuf[16];
+	char statebuf[32];
 	const char *statestr, *coredump;
 	struct procstat *ps;
 	struct job *j;
@@ -419,9 +419,20 @@ showjob(struct job *jp, int mode, struct output *out)
 			i = WSTOPSIG(ps->status);
 		else
 			i = -1;
-		statestr = strsignal(i);
-		if (statestr == NULL)
-			statestr = "Suspended";
+		{
+			const char *signame = (i >= 0) ?
+			    signum_to_signame(i) : NULL;
+			if (signame != NULL)
+				fmtstr(statebuf, sizeof(statebuf),
+				    "Stopped (SIG%s)", signame);
+			else if ((statestr = strsignal(i)) == NULL)
+				strlcpy(statebuf, "Suspended",
+				    sizeof(statebuf));
+			else
+				strlcpy(statebuf, statestr,
+				    sizeof(statebuf));
+		}
+		statestr = statebuf;
 #endif
 	} else if (WIFEXITED(status)) {
 		if (WEXITSTATUS(status) == 0)

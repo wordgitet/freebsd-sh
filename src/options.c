@@ -99,7 +99,7 @@ procargs(int argc, char **argv)
 			Eflag = 1;
 	}
 	if (mflag == 2)
-		mflag = iflag;
+		mflag = iflag && isatty(0);
 	for (i = 0; i < NOPTS; i++)
 		if (optval[i] == 2)
 			optval[i] = 0;
