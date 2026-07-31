@@ -557,6 +557,10 @@ freejob(struct job *jp)
 	int i;
 
 	INTOFF;
+	if (!jp->used) {
+		INTON;
+		return;
+	}
 	if (bgjob == jp)
 		bgjob = NULL;
 	for (i = jp->nprocs, ps = jp->ps ; --i >= 0 ; ps++) {
@@ -1314,7 +1318,7 @@ dowait(int mode, struct job *job)
 					jp->state = state;
 					if (jp != job) {
 						if (done && !jp->remembered &&
-						    !iflag && jp != bgjob)
+						    !iflag && !bflag && jp != bgjob)
 							freejob(jp);
 #if JOBS
 						else if (done)

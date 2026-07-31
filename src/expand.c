@@ -749,14 +749,9 @@ evalvar(const char *p, struct nodelist **restrict argbackq, int flag,
 		special = 1;
 	p = strchr(p, '=') + 1;
 	if (varflags & VSLINENO) {
-		if (bltinlookup("LINENO", 0) != NULL) {
-			set = 1;
-			special = 1;
-			val = NULL;
-		} else {
-			set = 0;
-			special = 0;
-		}
+		set = 1;
+		special = 1;
+		val = NULL;
 	} else if (special) {
 		set = varisset(var, varflags & VSNUL);
 		val = NULL;

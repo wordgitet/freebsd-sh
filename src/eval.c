@@ -1074,8 +1074,6 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 	if (xflag)
 		xtracecommand(&varlist, argc, argv);
 
-	cmdsub_status = exitstatus;
-
 	/* Now locate the command. */
 	if (argc == 0) {
 		/* Variable assignment(s) without command */
@@ -1372,6 +1370,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		argptr = argv + 1;
 		nextopt_optptr = NULL;		/* initialize nextopt */
 		builtin_flags = flags;
+		cmdsub_status = exitstatus;
 		exitstatus = (*builtinfunc[cmdentry.u.index])(argc, argv);
 		if (argc == 0 && had_cmdsub)
 			exitstatus = cmdsub_status;
