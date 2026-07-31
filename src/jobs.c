@@ -284,14 +284,24 @@ int
 bgcmd(int argc __unused, char **argv __unused)
 {
 	struct job *jp;
+	int err;
 
 	nextopt("");
 	if (!mflag)
 		error("job control disabled");
+	err = 0;
 	do {
-		jp = getjob(*argptr);
-		if (jp->jobctl == 0)
-			error("job not created under job control");
+		jp = getjob_nonotfound(*argptr);
+		if (jp == NULL) {
+			warning("No such job: %s", *argptr ? *argptr : "");
+			err = 1;
+			continue;
+		}
+		if (jp->jobctl == 0) {
+			warning("job not created under job control");
+			err = 1;
+			continue;
+		}
 		if (jp->state == JOBDONE)
 			continue;
 		restartjob(jp);
@@ -301,7 +311,7 @@ bgcmd(int argc __unused, char **argv __unused)
 		out1fmt("[%td] ", jp - jobtab + 1);
 		printjobcmd(jp, out1);
 	} while (*argptr != NULL && *++argptr != NULL);
-	return 0;
+	return err;
 }
 
 
@@ -747,6 +757,7 @@ int
 killjob(const char *name, int sig)
 {
 	struct job *jp;
+	int r;
 
 	jp = getjob(name);
 	if (jp->state == JOBDONE)
@@ -755,7 +766,10 @@ killjob(const char *name, int sig)
 		errno = ESRCH;
 		return -1;
 	}
-	return kill(-jp->ps[0].pid, sig);
+	r = kill(-jp->ps[0].pid, sig);
+	if (r == 0 && sig != SIGKILL && sig != SIGCONT && jp->state == JOBSTOPPED)
+		kill(-jp->ps[0].pid, SIGCONT);
+	return r;
 }
 
 static int
