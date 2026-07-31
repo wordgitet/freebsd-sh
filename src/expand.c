@@ -104,6 +104,7 @@ static int expsortcmp(const void *, const void *);
 static int patmatch(const char *, const char *);
 static void cvtnum(int, char *);
 static int collate_range_cmp(wchar_t, wchar_t);
+static int collate_equiv_match(wchar_t, wchar_t);
 static int parse_pat_collsym(const char **, wchar_t *, char);
 
 void
@@ -145,6 +146,37 @@ collate_range_cmp(wchar_t c1, wchar_t c2)
 	s2[0] = c2;
 	s2[1] = L'\0';
 	return (wcscoll(s1, s2));
+}
+
+static int
+collate_equiv_match(wchar_t c1, wchar_t c2)
+{
+	wchar_t s1[2], s2[2];
+	wchar_t x1[16], x2[16];
+	size_t n1, n2, i;
+
+	if (c1 == c2)
+		return 1;
+
+	s1[0] = c1;
+	s1[1] = L'\0';
+	s2[0] = c2;
+	s2[1] = L'\0';
+
+	n1 = wcsxfrm(x1, s1, 16);
+	n2 = wcsxfrm(x2, s2, 16);
+
+	if (n1 >= 16 || n2 >= 16)
+		return 0;
+
+	/* Compare primary collation weights (up to first L'\x01' separator) */
+	for (i = 0; i < n1 && i < n2; i++) {
+		if (x1[i] == 1 || x2[i] == 1)
+			return (x1[i] == x2[i]);
+		if (x1[i] != x2[i])
+			return 0;
+	}
+	return (i == n1 && i == n2);
 }
 
 static char *
@@ -1413,6 +1445,7 @@ patmatch(const char *pattern, const char *string)
 		case '[': {
 			const char *savep, *saveq;
 			int invert, found;
+			int is_equiv;
 			wchar_t chr;
 
 			savep = p, saveq = q;
@@ -1444,10 +1477,12 @@ patmatch(const char *pattern, const char *string)
 						continue;
 					}
 				}
+				is_equiv = 0;
 				if (c == '[' &&
 				    (*p == '.' || *p == '=') &&
 				    parse_pat_collsym(&p, &wc, *p)) {
-					/* wc already parsed */
+					is_equiv =
+					    (p[-2] == '=');
 				} else if (c == CTLESC) {
 					c = *p++;
 					if (localeisutf8 && c & 0x80) {
@@ -1483,6 +1518,9 @@ patmatch(const char *pattern, const char *string)
 					if (   collate_range_cmp(chr, wc) >= 0
 					    && collate_range_cmp(chr, wc2) <= 0
 					   )
+						found = 1;
+				} else if (is_equiv) {
+					if (collate_equiv_match(chr, wc))
 						found = 1;
 				} else {
 					if (chr == wc)
