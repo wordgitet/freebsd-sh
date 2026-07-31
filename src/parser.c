@@ -779,7 +779,11 @@ command(void)
 		n1 = simplecmd(rpp, redir);
 		return n1;
 	case TBLANK:
-		return NULL;
+		if (!redir)
+			return NULL;
+		tokpushback++;
+		n1 = simplecmd(rpp, redir);
+		return n1;
 	case TWORD:
 		tokpushback++;
 		n1 = simplecmd(rpp, redir);
