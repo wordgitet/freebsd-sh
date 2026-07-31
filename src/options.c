@@ -156,6 +156,7 @@ options(int cmdline)
 	int val;
 	int c;
 	int login = 0;
+	int c_pending = 0;
 
 	if (cmdline)
 		minusc = NULL;
@@ -190,21 +191,23 @@ options(int cmdline)
 		} else if (c == '+') {
 			val = 0;
 		} else {
+			if (cmdline && c_pending) {
+				/*
+				 * Options may follow -c.  The first non-option
+				 * operand is the command string.
+				 */
+				minusc = p - 1;
+				c_pending = 0;
+				break;
+			}
 			argptr--;
 			break;
 		}
 		while ((c = *p++) != '\0') {
 			if (c == 'c' && cmdline) {
-				char *q;
-
-				q = *argptr++;
-				if (q == NULL || minusc != NULL)
+				if (c_pending || minusc != NULL)
 					error("Bad -c option");
-				if ((strcmp(q, "-") == 0 ||
-				    strcmp(q, "--") == 0) &&
-				    *argptr != NULL)
-					q = *argptr++;
-				minusc = q;
+				c_pending = 1;
 			} else if (c == 'l' && cmdline) {
 				login = 1;
 			} else if (c == 'o') {
@@ -215,6 +218,8 @@ options(int cmdline)
 				setoption(c, val);
 		}
 	}
+	if (c_pending)
+		error("Bad -c option");
 	return (login);
 
 	/* When processing `set', a single "-" means turn off -x and -v */
@@ -234,6 +239,12 @@ end_options2:
 	if (!cmdline) {
 		if (*argptr == NULL)
 			setparam(0, argptr);
+		return (login);
+	}
+	if (c_pending) {
+		if (*argptr == NULL)
+			error("Bad -c option");
+		minusc = *argptr++;
 		return (login);
 	}
 
