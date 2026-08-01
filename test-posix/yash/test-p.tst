@@ -362,6 +362,9 @@ assert_true 11 '>' 100
 assert_false 11 '>' 11
 assert_false 100 '>' 11
 
+# Note: On FreeBSD, external /bin/test handling of sub-second mtime resolution
+# when comparing non-existent files or sub-second file creation timestamps
+# can differ from GNU /usr/bin/test on Linux.
 assert_true XXXXX -ot newer
 assert_false XXXXX -ot XXXXX
 assert_false newer -ot XXXXX

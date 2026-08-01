@@ -112,6 +112,8 @@ then
     skip=true
 fi
 
+# Note: The following 5 tests check a yash-specific extension where exit > 128
+# causes the shell to re-raise the signal to itself. POSIX specifies integer exit status.
 test_o 'exit built-in kills shell according to exit status (TERM)'
 "$TESTEE" -s <<'__END__'
 # This `sh` kills itself with SIGTERM
