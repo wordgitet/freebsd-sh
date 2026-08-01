@@ -184,6 +184,26 @@ __IN__
 4[?]
 __OUT__
 
+test_o 'OPTIND remains on a grouped option until it is exhausted'
+getopts abc o -abc
+printf '1[%s]\n' "$OPTIND"
+getopts abc o -abc
+printf '2[%s]\n' "$OPTIND"
+getopts abc o -abc
+printf '3[%s]\n' "$OPTIND"
+__IN__
+1[1]
+2[1]
+3[2]
+__OUT__
+
+test_o 'leading colon is silent-mode syntax, not an option'
+getopts :ab: o -:
+printf '[%s][%s][%s]\n' "$o" "$OPTARG" "$OPTIND"
+__IN__
+[?][:][2]
+__OUT__
+
 test_x -e 1 'single hyphen is not an option but an operand'
 getopts '' x -
 __IN__

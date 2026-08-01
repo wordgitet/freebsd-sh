@@ -512,7 +512,8 @@ atend:
 	}
 
 	c = *p++;
-	for (q = optstr; *q != c; ) {
+	/* A leading colon selects silent error handling; it is not an option. */
+	for (q = optstr + (optstr[0] == ':'); *q != c; ) {
 		if (*q == '\0') {
 			if (optstr[0] == ':') {
 				s[0] = c;
@@ -550,8 +551,14 @@ atend:
 	}
 
 out:
-	if (*optnext != NULL)
-		ind = *optnext - optfirst + 1;
+	if (*optnext != NULL) {
+		/*
+		 * optnext already points beyond the current argument.  Keep
+		 * OPTIND on that argument while another option remains in a
+		 * grouped option word, otherwise report the next argument.
+		 */
+		ind = *optnext - optfirst + (p == NULL || *p == '\0');
+	}
 	*optptr = p;
 	if (newoptarg != NULL)
 		err |= setvarsafe("OPTARG", newoptarg, 0);
