@@ -31,7 +31,7 @@
 #include_next <wchar.h>
 
 #ifndef iswascii
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
 #define iswascii(wc) (((wc) & ~0x7F) == 0)
 #endif
 #endif
