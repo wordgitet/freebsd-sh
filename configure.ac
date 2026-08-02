@@ -1,4 +1,4 @@
-AC_INIT([neoash], [15.1-ver28])
+AC_INIT([neoash], [15.1-ver29])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config-compat.h])

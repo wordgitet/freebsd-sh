@@ -53,6 +53,7 @@
 #endif
 
 static const char *arith_startbuf;
+static int arith_lineno = -1;
 
 const char *arith_buf;
 union yystype yylval;
@@ -96,7 +97,10 @@ static arith_t arith_lookupvarint(char *varname)
 	char *p;
 	arith_t result;
 
-	str = lookupvar(varname);
+	if (arith_lineno >= 0 && strcmp(varname, "LINENO") == 0)
+		return arith_lineno;
+	else
+		str = lookupvar(varname);
 	if (uflag && str == NULL)
 		yyerror("variable not set");
 	if (str == NULL || *str == '\0')
@@ -106,6 +110,12 @@ static arith_t arith_lookupvarint(char *varname)
 	if (errno != 0 || *p != '\0')
 		yyerror("variable conversion error");
 	return result;
+}
+
+void
+arith_set_lineno(int lineno)
+{
+	arith_lineno = lineno;
 }
 
 static inline int arith_prec(int op)

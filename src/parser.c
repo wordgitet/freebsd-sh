@@ -107,6 +107,17 @@ static struct parser_temp *parser_temp;
 static const char *const *checkkwd_override;
 static int suppressalias;
 
+static int
+currentlineno(void)
+{
+	int linno;
+
+	linno = plinno;
+	if (funclinno != 0)
+		linno -= funclinno - 1;
+	return linno;
+}
+
 #define NOEOFMARK ((const char *)&heredoclist)
 
 
@@ -1962,9 +1973,7 @@ varname:
 				 * current line number. */
 				STADJUST(-6, out);
 				CHECKSTRSPACE(11, out);
-				linno = plinno;
-				if (funclinno != 0)
-					linno -= funclinno - 1;
+				linno = currentlineno();
 				length = snprintf(out, 11, "%d", linno);
 				if (length > 10)
 					length = 10;
@@ -2109,6 +2118,7 @@ varname:
  * Parse an arithmetic expansion (indicate start of one and set state)
  */
 parsearith: {
+	char lineno[CTLARI_LINENO_LEN + 1];
 
 	if (level + 1 >= maxnest) {
 		maxnest *= 2;
@@ -2130,6 +2140,8 @@ parsearith: {
 		USTPUTC('"',out);
 	else
 		USTPUTC(' ',out);
+	(void)snprintf(lineno, sizeof(lineno), "%010d", currentlineno());
+	STPUTBIN(lineno, CTLARI_LINENO_LEN, out);
 	goto parsearith_return;
 }
 

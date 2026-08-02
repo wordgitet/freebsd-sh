@@ -44,6 +44,9 @@
 #define	CTLQUOTEMARK '\376'
 #define	CTLQUOTEEND '\377' /* only for ${v+-...} */
 
+/* Decimal source line number stored after the CTLARI quote marker. */
+#define CTLARI_LINENO_LEN 10
+
 /* variable substitution byte (follows CTLVAR) */
 #define VSTYPE		0x0f	/* type of variable substitution */
 #define VSNUL		0x10	/* colon--treat the empty string as unset */

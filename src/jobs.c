@@ -1704,7 +1704,7 @@ cmdputs(const char *s)
 				*q++ = '(';
 				*q++ = '(';
 			}
-			p++;
+			p += 1 + CTLARI_LINENO_LEN;
 		} else if (c == CTLENDARI) {
 			if (--cmdnleft > 0) {
 				*q++ = ')';

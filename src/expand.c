@@ -107,6 +107,57 @@ static int collate_range_cmp(wchar_t, wchar_t);
 static int collate_equiv_match(wchar_t, wchar_t);
 static int parse_pat_collsym(const char **, wchar_t *, char);
 
+/*
+ * Return the length of the UTF-8 character beginning at s.  An invalid or
+ * incomplete sequence is treated as one byte, preserving byte semantics for
+ * malformed input.
+ */
+static size_t
+utf8_charlen(const char *s)
+{
+	const unsigned char *p = (const unsigned char *)s;
+	size_t len;
+	size_t i;
+
+	if (!localeisutf8 || p[0] < 0x80)
+		return 1;
+	if (p[0] >= 0xc2 && p[0] <= 0xdf)
+		len = 2;
+	else if (p[0] >= 0xe0 && p[0] <= 0xef)
+		len = 3;
+	else if (p[0] >= 0xf0 && p[0] <= 0xf4)
+		len = 4;
+	else
+		return 1;
+	for (i = 1; i < len; i++) {
+		if (p[i] == '\0' || (p[i] & 0xc0) != 0x80)
+			return 1;
+	}
+	return len;
+}
+
+/*
+ * Return the byte length of the IFS character at s, or zero if s does not
+ * begin with an IFS character.  IFS is a sequence of characters, not bytes.
+ */
+static size_t
+ifs_match(const char *s, int *is_ws)
+{
+	const char *ifs;
+	size_t len;
+
+	ifs = ifsset() ? ifsval() : " \t\n";
+	for (; *ifs != '\0'; ifs += len) {
+		len = utf8_charlen(ifs);
+		if (strncmp(s, ifs, len) != 0)
+			continue;
+		*is_ws = len == 1 && (*ifs == ' ' || *ifs == '\t' ||
+		    *ifs == '\n');
+		return len;
+	}
+	return 0;
+}
+
 void
 emptyarglist(struct arglist *list)
 {
@@ -248,17 +299,19 @@ static char *
 stputs_split(const char *data, const char *syntax, int flag, char *p,
     struct worddest *dst)
 {
-	const char *ifs;
 	char c;
+	int is_ws;
+	size_t ifslen;
 
-	ifs = ifsset() ? ifsval() : " \t\n";
 	while (*data) {
 		CHECKSTRSPACE(3, p);
-		c = *data++;
-		if (strchr(ifs, c) != NULL) {
-			NEXTWORD(c, flag, p, dst);
+		ifslen = ifs_match(data, &is_ws);
+		if (ifslen != 0) {
+			NEXTWORD(is_ws ? ' ' : '\1', flag, p, dst);
+			data += ifslen;
 			continue;
 		}
+		c = *data++;
 		if ((flag & EXP_GLOB) && c == '\\' &&
 		    (*data == '*' || *data == '?' || *data == '[')) {
 			USTPUTC('\\', p);
@@ -338,6 +391,8 @@ argstr(const char *p, struct nodelist **restrict argbackq, int flag,
 	int firsteq = 1;
 	int split_lit;
 	int lit_quoted;
+	int ifs_ws;
+	size_t ifslen;
 
 	split_lit = flag & EXP_SPLIT_LIT;
 	lit_quoted = flag & EXP_LIT_QUOTED;
@@ -367,8 +422,9 @@ argstr(const char *p, struct nodelist **restrict argbackq, int flag,
 		case CTLESC:
 			c = *p++;
 			if (split_lit && !lit_quoted &&
-			    strchr(ifsset() ? ifsval() : " \t\n", c) != NULL) {
-				NEXTWORD(c, flag, expdest, dst);
+			    (ifslen = ifs_match(p - 1, &ifs_ws)) != 0) {
+				NEXTWORD(ifs_ws ? ' ' : '\1', flag, expdest, dst);
+				p += ifslen - 1;
 				break;
 			}
 			if (quotes)
@@ -393,8 +449,9 @@ argstr(const char *p, struct nodelist **restrict argbackq, int flag,
 			 * assignments (after the first '=' and after ':'s).
 			 */
 			if (split_lit && !lit_quoted &&
-			    strchr(ifsset() ? ifsval() : " \t\n", c) != NULL) {
-				NEXTWORD(c, flag, expdest, dst);
+			    (ifslen = ifs_match(p - 1, &ifs_ws)) != 0) {
+				NEXTWORD(ifs_ws ? ' ' : '\1', flag, expdest, dst);
+				p += ifslen - 1;
 				break;
 			}
 			USTPUTC(c, expdest);
@@ -407,8 +464,9 @@ argstr(const char *p, struct nodelist **restrict argbackq, int flag,
 			break;
 		default:
 			if (split_lit && !lit_quoted &&
-			    strchr(ifsset() ? ifsval() : " \t\n", c) != NULL) {
-				NEXTWORD(c, flag, expdest, dst);
+			    (ifslen = ifs_match(p - 1, &ifs_ws)) != 0) {
+				NEXTWORD(ifs_ws ? ' ' : '\1', flag, expdest, dst);
+				p += ifslen - 1;
 				break;
 			}
 			USTPUTC(c, expdest);
@@ -483,19 +541,27 @@ expari(const char *p, struct nodelist **restrict argbackq, int flag,
     struct worddest *dst)
 {
 	char *q, *start;
+	char linenobuf[CTLARI_LINENO_LEN + 1];
 	arith_t result;
+	int lineno;
 	int begoff;
 	int quoted;
 	int adj;
 
 	quoted = *p++ == '"';
+	memcpy(linenobuf, p, CTLARI_LINENO_LEN);
+	linenobuf[CTLARI_LINENO_LEN] = '\0';
+	lineno = (int)strtol(linenobuf, NULL, 10);
+	p += CTLARI_LINENO_LEN;
 	begoff = expdest - stackblock();
 	p = argstr(p, argbackq, 0, NULL);
 	STPUTC('\0', expdest);
 	start = stackblock() + begoff;
 
 	q = grabstackstr(expdest);
+	arith_set_lineno(lineno);
 	result = arith(start);
+	arith_set_lineno(-1);
 	ungrabstackstr(q, expdest);
 
 	start = stackblock() + begoff;
@@ -1009,7 +1075,8 @@ varvalue(const char *name, int quoted, int subtype, int flag,
 	char *p;
 	int i;
 	int splitlater;
-	char sep[2];
+	char sep[5];
+	size_t seplen;
 	char **ap;
 	char buf[(NSHORTOPTS > 10 ? NSHORTOPTS : 10) + 1];
 
@@ -1060,11 +1127,10 @@ varvalue(const char *name, int quoted, int subtype, int flag,
 		}
 		/* FALLTHROUGH */
 	case '*':
-		if (ifsset())
-			sep[0] = ifsval()[0];
-		else
-			sep[0] = ' ';
-		sep[1] = '\0';
+		p = ifsset() ? ifsval() : " ";
+		seplen = utf8_charlen(p);
+		memcpy(sep, p, seplen);
+		sep[seplen] = '\0';
 		for (ap = shellparam.p ; (p = *ap++) != NULL ; ) {
 			strtodest(p, flag, subtype, quoted, dst);
 			if (!*ap)
