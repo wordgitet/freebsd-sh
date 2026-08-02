@@ -1,4 +1,4 @@
-SUBDIRS = src
+SUBDIRS = vendor/libedit src
 EXTRA_DIST = README UPSTREAM.md AGENTS.md \
     include/bitstring.h include/bsdhash.h include/capsicum_helpers.h \
     include/err.h include/libcasper.h include/libutil.h include/md5.h \

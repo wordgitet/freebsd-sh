@@ -38,7 +38,7 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define if you have libedit */
+/* Define if libedit is available */
 #undef HAVE_LIBEDIT
 
 /* Define to 1 if you have the <limits.h> header file. */
@@ -112,9 +112,6 @@
 
 /* Define to 1 if you have the <wchar.h> header file. */
 #undef HAVE_WCHAR_H
-
-/* Define to disable history if libedit is missing */
-#undef NO_HISTORY
 
 /* Name of package */
 #undef PACKAGE

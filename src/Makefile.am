@@ -1,7 +1,9 @@
-AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) $(STANDARDS_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
+AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) $(STANDARDS_CPPFLAGS) $(LIBEDIT_CFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
 AM_CFLAGS = $(AX_CFLAGS)
 
 bin_PROGRAMS = neoash
+
+neoash_LDADD = $(LIBEDIT_LIBS)
 
 neoash_SOURCES = \
 	alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \

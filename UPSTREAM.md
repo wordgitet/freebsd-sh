@@ -34,3 +34,10 @@ The shell sources were subsequently synchronized with:
 - The 15.1 job-lifecycle update is not imported because it produces
   unsolicited completed-job notifications and regresses the POSIX signal
   suite.
+
+## Vendored dependencies
+
+- `vendor/libedit/` is libedit 20260512-3.1 from
+  https://www.thrysoee.dk/editline/. It is BSD-licensed; see its bundled
+  `COPYING` file. Neoash builds it as a private static library so that line
+  editing is reproducible and does not require a host libedit installation.

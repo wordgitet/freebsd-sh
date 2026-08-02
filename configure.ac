@@ -1,4 +1,4 @@
-AC_INIT([neoash], [15.1-ver22])
+AC_INIT([neoash], [15.1-ver23])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config-compat.h])
@@ -118,39 +118,21 @@ if test "$ac_cv_func_strchrnul" = yes; then
     AC_DEFINE([HAVE_STRCHRNUL], 1, [Define if you have a working strchrnul])
 fi
 
-dnl Check for libedit
-AC_ARG_WITH([libedit],
-    [AS_HELP_STRING([--with-libedit], [Compile with libedit support [default=check]])],
-    [],
-    [with_libedit=check])
-
-use_libedit=no
-if test "$with_libedit" != "no"; then
-    AC_CHECK_LIB([edit], [el_init], [
-        AC_CHECK_HEADER([histedit.h], [
-            use_libedit=yes
-            LIBS="$LIBS -ledit"
-            AC_DEFINE([HAVE_LIBEDIT], 1, [Define if you have libedit])
-        ], [
-            if test "$with_libedit" = "yes"; then
-                AC_MSG_ERROR([histedit.h header not found])
-            fi
-        ])
-    ], [
-        if test "$with_libedit" = "yes"; then
-            AC_MSG_ERROR([libedit library not found])
-        fi
-    ])
-fi
-
-if test "$use_libedit" = "yes"; then
-    dnl Check for fn_complete2 in libedit
-    AC_CHECK_LIB([edit], [fn_complete2], [
-        AC_DEFINE([HAVE_FN_COMPLETE2], 1, [Define if libedit has fn_complete2])
-    ])
-else
-    AC_DEFINE([NO_HISTORY], 1, [Define to disable history if libedit is missing])
-fi
+dnl Build the vendored, portable libedit as a private static dependency.
+AC_CONFIG_SUBDIRS([vendor/libedit])
+AC_DEFINE([HAVE_LIBEDIT], 1, [Define if libedit is available])
+AC_DEFINE([HAVE_FN_COMPLETE2], 1, [Define if libedit has fn_complete2])
+libedit_save_LIBS=$LIBS
+AC_SEARCH_LIBS([tgetent], [ncurses curses termcap tinfo], [], [
+    AC_MSG_ERROR([a terminal library is required for bundled libedit])
+])
+LIBEDIT_TERM_LIBS=$LIBS
+LIBS=$libedit_save_LIBS
+LIBEDIT_CFLAGS='-I$(top_srcdir)/vendor/libedit/src'
+LIBEDIT_LIBS='$(top_builddir)/vendor/libedit/src/.libs/libedit.a $(LIBEDIT_TERM_LIBS)'
+AC_SUBST([LIBEDIT_CFLAGS])
+AC_SUBST([LIBEDIT_LIBS])
+AC_SUBST([LIBEDIT_TERM_LIBS])
 
 dnl Check for warning flags.
 dnl First probe whether the compiler understands -Werror=unknown-warning-option
