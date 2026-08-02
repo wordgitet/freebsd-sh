@@ -496,9 +496,6 @@ token_supported(const char *s, enum token token)
 	if (token == FILNT || token == FILOT || token == FILEQ ||
 	    token == STRLT || token == STRGT)
 		return NEOASH_HAS_POSIX_2024;
-	if (token == BAND || token == BOR || token == LPAREN ||
-	    token == RPAREN)
-		return NEOASH_OLD_XSI;
 	return 1;
 }
 
