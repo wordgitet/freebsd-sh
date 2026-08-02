@@ -101,7 +101,7 @@ procargs(int argc, char **argv)
 			Eflag = 1;
 	}
 	if (mflag == 2)
-		mflag = iflag && isatty(0);
+		mflag = iflag == 1 && isatty(0);
 	if (hflag == 2)
 		hflag = 1;
 	for (i = 0; i < NOPTS; i++)
