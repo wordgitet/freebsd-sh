@@ -70,11 +70,11 @@ __RCSID("$NetBSD: terminal.c,v 1.47 2025/12/16 02:40:48 kre Exp $");
 
 #if defined(__sun)
 extern int tgetent(char *, const char *);
-extern int tgetflag(char *);
-extern int tgetnum(char *);
+extern int tgetflag(const char *);
+extern int tgetnum(const char *);
 extern int tputs(const char *, int, int (*)(int));
 extern char* tgoto(const char*, int, int);
-extern char* tgetstr(char*, char**);
+extern char* tgetstr(const char*, char**);
 #endif
 
 #ifdef _REENTRANT

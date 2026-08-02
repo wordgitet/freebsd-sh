@@ -125,11 +125,11 @@ typedef unsigned int	u_int32_t;
 
 #if defined(__sun)
 extern int tgetent(char *, const char *);
-extern int tgetflag(char *);
-extern int tgetnum(char *);
+extern int tgetflag(const char *);
+extern int tgetnum(const char *);
 extern int tputs(const char *, int, int (*)(int));
 extern char* tgoto(const char*, int, int);
-extern char* tgetstr(char*, char**);
+extern char* tgetstr(const char*, char**);
 #endif
 
 #endif /* _h_sys */
