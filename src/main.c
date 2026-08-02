@@ -37,8 +37,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <locale.h>
 #include <errno.h>
+#include <paths.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "shell.h"
@@ -68,6 +71,7 @@
 
 int rootpid;
 int rootshell;
+const char *shell_exec_path = _PATH_BSHELL;
 struct jmploc main_handler;
 int localeisutf8, initial_localeisutf8;
 
@@ -85,6 +89,46 @@ static void reset(void);
 static void cmdloop(int);
 static void read_profile(const char *);
 static char *find_dot_file(char *);
+static void set_shell_exec_path(const char *);
+
+static void
+set_shell_exec_path(const char *argv0)
+{
+	const char *path;
+	const char *end;
+	char candidate[PATH_MAX];
+	char resolved[PATH_MAX];
+	size_t length;
+
+	if (argv0 == NULL || *argv0 == '\0')
+		return;
+	if (strchr(argv0, '/') != NULL) {
+		if (realpath(argv0, resolved) != NULL)
+			shell_exec_path = strdup(resolved);
+		return;
+	}
+	path = getenv("PATH");
+	while (path != NULL && *path != '\0') {
+		end = strchr(path, ':');
+		length = end == NULL ? strlen(path) : (size_t)(end - path);
+		if (length == 0)
+			length = 1;
+		if (length + 1 + strlen(argv0) < sizeof(candidate)) {
+			if (path[0] == ':')
+				candidate[0] = '.';
+			else
+				memcpy(candidate, path, length);
+			candidate[length] = '/';
+			strcpy(candidate + length + 1, argv0);
+			if (access(candidate, X_OK) == 0 &&
+			    realpath(candidate, resolved) != NULL) {
+				shell_exec_path = strdup(resolved);
+				return;
+			}
+		}
+		path = end == NULL ? NULL : end + 1;
+	}
+}
 
 /*
  * Main routine.  We initialize things, parse the arguments, execute
@@ -97,6 +141,7 @@ static char *find_dot_file(char *);
 int
 main(int argc, char *argv[])
 {
+	set_shell_exec_path(argv[0]);
 #ifndef HAVE_GETPROGNAME
 	if (argv[0] != NULL) {
 		const char *p = strrchr(argv[0], '/');

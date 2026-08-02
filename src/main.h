@@ -34,6 +34,7 @@
 
 extern int rootpid;	/* pid of main shell */
 extern int rootshell;	/* true if we aren't a child of the main shell */
+extern const char *shell_exec_path;	/* pathname used to re-execute this shell */
 extern struct jmploc main_handler;	/* top level exception handler */
 
 void readcmdfile(const char *, int);
