@@ -35,6 +35,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <glob.h>
 #include <limits.h>
 #include <paths.h>
 #include <stdbool.h>
@@ -81,6 +82,7 @@ static unsigned char sh_complete(EditLine *, int);
 #else
 #define sh_complete _el_fn_complete
 #endif
+static unsigned char sh_vi_expand(EditLine *, int);
 
 static const char *
 get_histfile(void)
@@ -199,6 +201,9 @@ histedit(void)
 				el_set(el, EL_ADDFN, "sh-complete",
 				    "Filename completion",
 				    sh_complete);
+				el_set(el, EL_ADDFN, "sh-vi-expand",
+				    "List shell pathname expansions",
+				    sh_vi_expand);
 			} else {
 bad:
 				out2fmt_flush("sh: can't initialize editing\n");
@@ -218,6 +223,14 @@ bad:
 			}
 			el_set(el, EL_BIND, "^I", "sh-complete", NULL);
 			el_source(el, NULL);
+			if (Vflag) {
+				/*
+				 * POSIX UPE vi mode uses '=' to list pathname
+				 * expansions.  libedit leaves that key unassigned and its
+				 * completion API treats glob metacharacters literally.
+				 */
+				el_set(el, EL_BIND, "-a", "=", "sh-vi-expand", NULL);
+			}
 		}
 	} else {
 		INTOFF;
@@ -231,6 +244,62 @@ bad:
 		}
 		INTON;
 	}
+}
+
+/*
+ * List pathname expansions for the word at the vi command cursor.
+ *
+ * The historical POSIX UPE '=' command is a shell expansion operation,
+ * rather than ordinary filename completion.  Keep it in neoash so the
+ * editor library remains responsible only for line editing.
+ */
+static unsigned char
+sh_vi_expand(EditLine *sel, int ch __unused)
+{
+	const LineInfo *li;
+	const char *end;
+	const char *word;
+	char *pattern;
+	glob_t matches;
+	size_t length;
+	size_t i;
+	int error;
+
+	if (fflag)
+		return (CC_ERROR);
+
+	li = el_line(sel);
+	word = li->cursor;
+	while (word > li->buffer &&
+	    strchr(" \t\n\"'`@$><=;|&{(", word[-1]) == NULL)
+		word--;
+	/* In vi command mode cursor points at, rather than after, a character. */
+	end = li->cursor;
+	if (end < li->lastchar)
+		end++;
+	while (end < li->lastchar &&
+	    strchr(" \t\n\"'`@$><=;|&{(", *end) == NULL)
+		end++;
+	length = (size_t)(end - word);
+	if (length == 0)
+		return (CC_ERROR);
+	pattern = strndup(word, length);
+	if (pattern == NULL)
+		return (CC_ERROR);
+	error = glob(pattern, 0, NULL, &matches);
+	free(pattern);
+	if (error != 0 || matches.gl_pathc == 0) {
+		globfree(&matches);
+		return (CC_ERROR);
+	}
+
+	fputc('\n', el_out);
+	for (i = 0; i < matches.gl_pathc; i++)
+		fprintf(el_out, "%s%s", matches.gl_pathv[i],
+		    i + 1 == matches.gl_pathc ? "\n" : "  ");
+	fflush(el_out);
+	globfree(&matches);
+	return (CC_REDISPLAY);
 }
 
 
