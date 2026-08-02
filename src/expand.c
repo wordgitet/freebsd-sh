@@ -805,7 +805,9 @@ evalvar(const char *p, struct nodelist **restrict argbackq, int flag,
 	int startloc;
 	int varlen;
 	int varlenb;
+	int lineno_value;
 	char buf[21];
+	const char *lineno;
 
 	varflags = (unsigned char)*p++;
 	subtype = varflags & VSTYPE;
@@ -814,10 +816,24 @@ evalvar(const char *p, struct nodelist **restrict argbackq, int flag,
 	if (! is_name(*p))
 		special = 1;
 	p = strchr(p, '=') + 1;
+	lineno = NULL;
 	if (varflags & VSLINENO) {
-		set = 1;
-		special = 1;
-		val = NULL;
+		lineno = p;
+		p += VSLINENO_LEN;
+		lineno_value = (int)strtol(lineno, NULL, 10);
+		if (lineno_enabled) {
+			set = 1;
+			special = 1;
+			val = NULL;
+		} else {
+			special = 0;
+			val = bltinlookup(var, 1);
+			if (val == NULL || ((varflags & VSNUL) && val[0] == '\0')) {
+				val = NULL;
+				set = 0;
+			} else
+				set = 1;
+		}
 	} else if (special) {
 		set = varisset(var, varflags & VSNUL);
 		val = NULL;
@@ -847,10 +863,7 @@ evalvar(const char *p, struct nodelist **restrict argbackq, int flag,
 		/* insert the value of the variable */
 		if (special) {
 			if (varflags & VSLINENO) {
-				if (p - var > (ptrdiff_t)sizeof(buf))
-					abort();
-				memcpy(buf, var, p - var - 1);
-				buf[p - var - 1] = '\0';
+				cvtnum(lineno_value, buf);
 				strtodest(buf, flag, subtype,
 				    varflags & VSQUOTE, dst);
 			} else

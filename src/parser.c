@@ -1967,17 +1967,9 @@ varname:
 				c = pgetc_linecont();
 				length++;
 			} while (!is_eof(c) && is_in_name(c));
-			if (length == 6 &&
+			if (lineno_enabled && length == 6 &&
 			    strncmp(out - length, "LINENO", length) == 0) {
-				/* Replace the variable name with the
-				 * current line number. */
-				STADJUST(-6, out);
-				CHECKSTRSPACE(11, out);
 				linno = currentlineno();
-				length = snprintf(out, 11, "%d", linno);
-				if (length > 10)
-					length = 10;
-				out += length;
 				flags |= VSLINENO;
 			}
 		} else if (is_digit(c)) {
@@ -2059,6 +2051,12 @@ varname:
 			pungetc();
 		}
 		STPUTC('=', out);
+		if (flags & VSLINENO) {
+			char lineno[VSLINENO_LEN + 1];
+
+			(void)snprintf(lineno, sizeof(lineno), "%010d", linno);
+			STPUTBIN(lineno, VSLINENO_LEN, out);
+		}
 		if (state[level].syntax == DQSYNTAX ||
 		    state[level].syntax == ARISYNTAX)
 			flags |= VSQUOTE;

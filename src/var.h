@@ -86,6 +86,7 @@ extern struct var vterm;
 extern int localeisutf8;
 /* The parser uses the locale that was in effect at startup. */
 extern int initial_localeisutf8;
+extern int lineno_enabled;
 
 /*
  * The following macros access the values of the above variables.

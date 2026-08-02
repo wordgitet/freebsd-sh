@@ -97,7 +97,8 @@ static arith_t arith_lookupvarint(char *varname)
 	char *p;
 	arith_t result;
 
-	if (arith_lineno >= 0 && strcmp(varname, "LINENO") == 0)
+	if (lineno_enabled && arith_lineno >= 0 &&
+	    strcmp(varname, "LINENO") == 0)
 		return arith_lineno;
 	else
 		str = lookupvar(varname);

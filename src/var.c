@@ -187,6 +187,8 @@ static void setvareq_const(const char *s, int flags);
 
 extern char **environ;
 
+int lineno_enabled = 1;
+
 /*
  * This routine initializes the builtin variables and imports the environment.
  * It is called when the shell is initialized.
@@ -338,6 +340,8 @@ setvareq(char *s, int flags)
 	struct var *vp, **vpp;
 	int nlen;
 
+	if (varequal(s, "LINENO"))
+		lineno_enabled = 0;
 	if (aflag)
 		flags |= VEXPORT;
 	if (forcelocal && !(flags & (VNOSET | VNOLOCAL)))
@@ -887,6 +891,8 @@ unsetvar(const char *s)
 	struct var **vpp;
 	struct var *vp;
 
+	if (strcmp(s, "LINENO") == 0)
+		lineno_enabled = 0;
 	vp = find_var(s, &vpp, NULL);
 	if (vp == NULL)
 		return (0);
