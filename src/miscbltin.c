@@ -41,6 +41,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+#include <ctype.h>
 #include <errno.h>
 #include <poll.h>
 #include <signal.h>
@@ -333,7 +334,7 @@ readcmd(int argc __unused, char **argv __unused)
 		if (c == delim)
 			break;
 		if (strchr(ifs, c))
-			is_ifs = strchr(" \t\n", c) ? 1 : 2;
+			is_ifs = isspace((unsigned char)c) ? 1 : 2;
 		else
 			is_ifs = 0;
 
