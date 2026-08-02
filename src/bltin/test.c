@@ -28,6 +28,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../standards.h"
+
 #ifdef SHELL
 #define main testcmd
 #include "bltin/bltin.h"
@@ -188,6 +190,7 @@ static int	olderf(const char *, const char *);
 static int	primary(enum token);
 static void	syntax(const char *, const char *);
 static enum	token t_lex(char *);
+static int	token_supported(const char *, enum token);
 
 int
 main(int argc, char **argv)
@@ -336,8 +339,12 @@ binop(enum token n)
 	case STRNE:
 		return strcmp(opnd1, opnd2) != 0;
 	case STRLT:
+		if (NEOASH_POSIX_AT_LEAST(202405L))
+			return strcoll(opnd1, opnd2) < 0;
 		return strcmp(opnd1, opnd2) < 0;
 	case STRGT:
+		if (NEOASH_POSIX_AT_LEAST(202405L))
+			return strcoll(opnd1, opnd2) > 0;
 		return strcmp(opnd1, opnd2) > 0;
 	case INTEQ:
 		return intcmp(opnd1, opnd2) == 0;
@@ -467,12 +474,32 @@ t_lex(char *s)
 		return EOI;
 	}
 	num = find_op(s);
+	if (!token_supported(s, num))
+		return OPERAND;
 	if (((TOKEN_TYPE(num) == UNOP || TOKEN_TYPE(num) == BUNOP)
 				&& isunopoperand()) ||
 	    (num == LPAREN && islparenoperand()) ||
 	    (num == RPAREN && isrparenoperand()))
 		return OPERAND;
 	return num;
+}
+
+static int
+token_supported(const char *s, enum token token)
+{
+	if (NEOASH_EXTENSIONS)
+		return 1;
+	if (strcmp(s, "==") == 0)
+		return 0;
+	if (token == FILSTCK || token == FILUID || token == FILGID)
+		return 0;
+	if (token == FILNT || token == FILOT || token == FILEQ ||
+	    token == STRLT || token == STRGT)
+		return NEOASH_HAS_POSIX_2024;
+	if (token == BAND || token == BOR || token == LPAREN ||
+	    token == RPAREN)
+		return NEOASH_OLD_XSI;
+	return 1;
 }
 
 static int

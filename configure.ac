@@ -1,4 +1,4 @@
-AC_INIT([neoash], [15.1-ver20])
+AC_INIT([neoash], [15.1-ver21])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config-compat.h])
@@ -17,6 +17,54 @@ dnl AC_USE_SYSTEM_EXTENSIONS defines them in config-compat.h and for
 dnl configure checks, but may not add them to CPPFLAGS on non-GNU targets.
 SHELL_EXT_CPPFLAGS="-D_GNU_SOURCE -D_ALL_SOURCE -D_DARWIN_C_SOURCE -D__EXTENSIONS__"
 AC_SUBST([SHELL_EXT_CPPFLAGS])
+
+AC_ARG_WITH([posix-version],
+    [AS_HELP_STRING([--with-posix-version=VERSION],
+        [disable extensions and target POSIX VERSION: 200112, 200809, or 202405 @<:@default=native@:>@])],
+    [],
+    [with_posix_version=native])
+
+case "$with_posix_version" in
+native|none|no)
+    neoash_posix_version=0
+    ;;
+200112|200809|202405)
+    neoash_posix_version=$with_posix_version
+    ;;
+*)
+    AC_MSG_ERROR([unsupported POSIX version: $with_posix_version])
+    ;;
+esac
+
+AC_ARG_WITH([xopen-version],
+    [AS_HELP_STRING([--with-xopen-version=VERSION],
+        [compile with XSI VERSION: 600, 700, or 800 @<:@default=none@:>@])],
+    [],
+    [with_xopen_version=none])
+
+case "$with_xopen_version" in
+none|no)
+    neoash_xopen_version=0
+    ;;
+600|700|800)
+    neoash_xopen_version=$with_xopen_version
+    ;;
+*)
+    AC_MSG_ERROR([unsupported X/Open version: $with_xopen_version])
+    ;;
+esac
+
+case "$neoash_posix_version:$neoash_xopen_version" in
+0:0|200112:0|200112:600|200809:0|200809:700|202405:0|202405:800)
+    ;;
+*)
+    AC_MSG_ERROR([X/Open version $with_xopen_version does not match POSIX version $with_posix_version])
+    ;;
+esac
+
+STANDARDS_CPPFLAGS="-DNEOASH_POSIX_VERSION=${neoash_posix_version}L -DNEOASH_XOPEN_VERSION=${neoash_xopen_version}"
+AC_SUBST([STANDARDS_CPPFLAGS])
+AC_MSG_NOTICE([neoash standards profile: POSIX=$with_posix_version X/Open=$with_xopen_version])
 
 
 

@@ -51,6 +51,8 @@
 #include <unistd.h>
 #include <wchar.h>
 
+#include "../standards.h"
+
 #ifdef SHELL
 #define	main printfcmd
 #include "bltin/bltin.h"
@@ -197,7 +199,7 @@ main(int argc, char *argv[])
 static char *
 printf_doformat(char *fmt, int *rval)
 {
-	static const char skip1[] = "#'-+ 0";
+	const char *skip1 = NEOASH_EXTENSIONS ? "#'-+ 0" : "#-+ 0";
 	int fieldwidth, haveprec, havewidth, mod_ldbl, precision;
 	char convch, nextch;
 	char start[strlen(fmt) + 1];
@@ -214,6 +216,10 @@ printf_doformat(char *fmt, int *rval)
 	/* look for "n$" field index specifier */
 	l = strspn(fmt, digits);
 	if ((l > 0) && (fmt[l] == '$')) {
+		if (!NEOASH_HAS_POSIX_2024) {
+			warnx("n$ formats require POSIX.1-2024");
+			return (NULL);
+		}
 		int idx = atoi(fmt);
 		if (idx <= myargc) {
 			gargv = &myargv[idx - 1];
@@ -237,6 +243,10 @@ printf_doformat(char *fmt, int *rval)
 	}
 
 	if (*fmt == '*') {
+		if (!NEOASH_EXTENSIONS) {
+			warnx("'*' field widths are not supported by POSIX printf");
+			return (NULL);
+		}
 
 		fmt++;
 		l = strspn(fmt, digits);
@@ -281,6 +291,10 @@ printf_doformat(char *fmt, int *rval)
 		*dptr++ = '.';
 
 		if (*fmt == '*') {
+			if (!NEOASH_EXTENSIONS) {
+				warnx("'*' precisions are not supported by POSIX printf");
+				return (NULL);
+			}
 
 			fmt++;
 			l = strspn(fmt, digits);
@@ -337,6 +351,10 @@ printf_doformat(char *fmt, int *rval)
 	 * them, but consider the command  printf %a 1.1
 	 */
 	if (*fmt == 'L') {
+		if (!NEOASH_EXTENSIONS) {
+			warnx("length modifiers are not supported by POSIX printf");
+			return (NULL);
+		}
 		mod_ldbl = 1;
 		fmt++;
 		if (!strchr("aAeEfFgG", *fmt)) {
@@ -364,6 +382,10 @@ printf_doformat(char *fmt, int *rval)
 		int getout = 0;
 		bool skipesc = false;
 
+		if (convch == 'q' && !NEOASH_EXTENSIONS) {
+			warnx("illegal format character %c", convch);
+			return (NULL);
+		}
 		/* Convert "b" or "q" to "s" for output. */
 		start[strlen(start) - 1] = 's';
 		if (convch == 'q')
@@ -421,6 +443,11 @@ printf_doformat(char *fmt, int *rval)
 	case 'g': case 'G':
 	case 'a': case 'A': {
 		long double p;
+
+		if (!NEOASH_EXTENSIONS) {
+			warnx("illegal format character %c", convch);
+			return (NULL);
+		}
 
 		if (getfloating(&p, mod_ldbl))
 			*rval = 1;
@@ -594,8 +621,14 @@ escape(char *fmt, int percent, size_t *len)
 			*len = store - save;
 			return (0);
 		case '\\':		/* backslash */
-		case '\'':		/* single quote */
 			*store = *fmt;
+			break;
+		case '\'':		/* single quote */
+			if (!NEOASH_EXTENSIONS) {
+				*store++ = '\\';
+				*store = *fmt;
+			} else
+				*store = *fmt;
 			break;
 		case 'a':		/* bell/alert */
 			*store = '\a';
@@ -627,7 +660,9 @@ escape(char *fmt, int percent, size_t *len)
 			*store = '\v';
 			break;
 		case 'x':		/* hexadecimal constant */
-			if (!percent) {
+			if (!percent || !NEOASH_EXTENSIONS) {
+				if (!NEOASH_EXTENSIONS)
+					*store++ = '\\';
 				*store = 'x';
 				break;
 			}
@@ -661,6 +696,8 @@ escape(char *fmt, int percent, size_t *len)
 				*store = (char)value;
 			break;
 		default:
+			if (!NEOASH_EXTENSIONS)
+				*store++ = '\\';
 			*store = *fmt;
 			break;
 		}

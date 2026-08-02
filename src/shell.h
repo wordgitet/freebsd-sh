@@ -37,6 +37,8 @@
 
 #include <inttypes.h>
 
+#include "standards.h"
+
 /*
  * The follow should be set to reflect the type of system you have:
  *	JOBS -> 1 if you have Berkeley job control, 0 otherwise.

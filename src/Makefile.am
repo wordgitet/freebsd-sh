@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
+AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) $(STANDARDS_CPPFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
 AM_CFLAGS = $(AX_CFLAGS)
 
 bin_PROGRAMS = neoash
@@ -11,7 +11,7 @@ neoash_SOURCES = \
 	compat/mktemp.c compat/setmode.c compat/signames.c compat/strlfuncs.c \
 	alias.h arith.h arith_yacc.h cd.h error.h eval.h exec.h expand.h \
 	input.h jobs.h mail.h main.h memalloc.h myhistedit.h mystring.h \
-	options.h output.h parser.h redir.h shell.h show.h trap.h var.h
+	options.h output.h parser.h redir.h shell.h show.h standards.h trap.h var.h
 
 nodist_neoash_SOURCES = \
 	builtins.c builtins.h \

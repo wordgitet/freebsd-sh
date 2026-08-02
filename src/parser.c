@@ -633,7 +633,11 @@ command(void)
 		break;
 	case TFOR: {
 		static const char *const for_in_kwd[] = { "in", "do", NULL };
+#if NEOASH_EXTENSIONS
 		static const char *const for_body_kwd[] = { "do", "{", NULL };
+#else
+		static const char *const for_body_kwd[] = { "do", NULL };
+#endif
 		if (readtoken() != TWORD || quoteflag || ! goodname(wordtext))
 			synerror("Bad for loop variable");
 		n1 = (union node *)stalloc(sizeof (struct nfor));
@@ -684,13 +688,17 @@ command(void)
 		if (t == TWORD && !quoteflag) {
 			if (equal(wordtext, "do"))
 				t = TDO;
+#if NEOASH_EXTENSIONS
 			else if (equal(wordtext, "{"))
 				t = TBEGIN;
+#endif
 		}
 		if (t == TDO)
 			t = TDONE;
+#if NEOASH_EXTENSIONS
 		else if (t == TBEGIN)
 			t = TEND;
+#endif
 		else
 			synexpect(-1);
 		n1->nfor.body = list(0);
@@ -879,6 +887,8 @@ simplecmd(union node **rpp, union node *redir)
 			    strchr(n->narg.text, '/') ||
 			    strchr("!%*+-=?@}~",
 				n->narg.text[strlen(n->narg.text) - 1]))
+				synerror("Bad function name");
+			if (!NEOASH_EXTENSIONS && !goodname(n->narg.text))
 				synerror("Bad function name");
 			rmescapes(n->narg.text);
 			n->type = NDEFUN;
@@ -1180,8 +1190,13 @@ xxreadtoken(void)
 			c = pgetc_linecont();
 			if (c == ';')
 				RETURN(TENDCASE);
-			else if (c == '&')
+			else if (c == '&') {
+#if NEOASH_HAS_POSIX_2024
 				RETURN(TFALLTHRU);
+#else
+				synerror(";& requires POSIX.1-2024");
+#endif
+			}
 			pungetc();
 			RETURN(TSEMI);
 		case '(':
@@ -2076,7 +2091,8 @@ varname:
 				newvarnest++;
 			}
 		}
-	} else if (c == '\'' && state[level].syntax == BASESYNTAX) {
+	} else if (NEOASH_HAS_POSIX_2024 && c == '\'' &&
+	    state[level].syntax == BASESYNTAX) {
 		/* $'cstylequotes' */
 		USTPUTC(CTLQUOTEMARK, out);
 		state[level].syntax = SQSYNTAX;
@@ -2338,6 +2354,11 @@ getprompt(void *unused __unused)
 	default:
 		return internal_error;
 	}
+
+#if !NEOASH_EXTENSIONS
+	strlcpy(ps, fmt, sizeof(ps));
+	return ps;
+#endif
 
 	/*
 	 * Format prompt string.

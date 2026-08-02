@@ -197,7 +197,8 @@ readcmd(int argc __unused, char **argv __unused)
 	delim = '\n';
 	prompt = NULL;
 	timeout = -1;
-	while ((i = nextopt("d:erp:t:")) != '\0') {
+	while ((i = nextopt(NEOASH_EXTENSIONS ? "d:erp:t:" :
+	    (NEOASH_HAS_POSIX_2024 ? "d:r" : "r"))) != '\0') {
 		switch(i) {
 		case 'd':
 			delim = shoptarg[0];
@@ -310,8 +311,11 @@ readcmd(int argc __unused, char **argv __unused)
 			status = 1;
 			break;
 		}
-		if (c == '\0')
+		if (c == '\0') {
+			if (delim == '\0')
+				break;
 			continue;
+		}
 		CHECKSTRSPACE(1, p);
 		if (backslash) {
 			backslash = 0;
@@ -586,6 +590,18 @@ static const struct limits limits[] = {
 
 enum limithow { SOFT = 0x1, HARD = 0x2 };
 
+static int
+limit_supported(char option)
+{
+	if (NEOASH_EXTENSIONS)
+		return 1;
+	if (!NEOASH_HAS_POSIX_2024)
+		return NEOASH_OLD_XSI && option == 'f';
+	if (strchr("HSacdfnsv", option) != NULL)
+		return 1;
+	return NEOASH_XSI_PROFILE(800) && option == 't';
+}
+
 static void
 printlimit(enum limithow how, const struct rlimit *limit,
     const struct limits *l)
@@ -616,7 +632,11 @@ ulimitcmd(int argc __unused, char **argv __unused)
 	struct rlimit	limit;
 
 	what = 'f';
-	while ((optc = nextopt("HSatfdsmcnuvlbpwkoreiqy")) != '\0')
+	while ((optc = nextopt(NEOASH_EXTENSIONS ?
+	    "HSatfdsmcnuvlbpwkoreiqy" :
+	    (NEOASH_HAS_POSIX_2024 ?
+	    (NEOASH_XSI_PROFILE(800) ? "HSatcdfnsv" : "HSacdfnsv") :
+	    "f"))) != '\0')
 		switch (optc) {
 		case 'H':
 			how = HARD;
@@ -667,6 +687,9 @@ ulimitcmd(int argc __unused, char **argv __unused)
 	if (all) {
 		for (l = limits; l->name; l++) {
 			char optbuf[40];
+
+			if (!limit_supported(l->option))
+				continue;
 			if (getrlimit(l->cmd, &limit) < 0)
 				error("can't get limit: %s", strerror(errno));
 

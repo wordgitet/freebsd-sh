@@ -274,7 +274,7 @@ hashcmd(int argc __unused, char **argv __unused)
 
 	errors = 0;
 	verbose = 0;
-	while ((c = nextopt("rv")) != '\0') {
+	while ((c = nextopt(NEOASH_EXTENSIONS ? "rv" : "r")) != '\0') {
 		if (c == 'r') {
 			clearcmdentry();
 		} else if (c == 'v') {
@@ -536,6 +536,29 @@ success:
 
 
 
+static int
+builtin_supported(const char *name)
+{
+	static const char *const extensions[] = {
+		"bind", "builtin", "chdir", "freebsd_wordexp", "jobid",
+		"let", "local", "setvar", "wordexp", NULL
+	};
+	const char *const *ext;
+
+	if (NEOASH_EXTENSIONS)
+		return 1;
+	for (ext = extensions; *ext != NULL; ext++)
+		if (strcmp(name, *ext) == 0)
+			return 0;
+	if (strcmp(name, "ulimit") == 0 &&
+	    !NEOASH_XSI && !NEOASH_POSIX_AT_LEAST(202405L))
+		return 0;
+	if (strcmp(name, "type") == 0 && !NEOASH_XSI)
+		return 0;
+	return 1;
+}
+
+
 /*
  * Search the table of builtin commands.
  */
@@ -549,6 +572,8 @@ find_builtin(const char *name, int *special)
 	len = strlen(name);
 	for (bp = builtincmd ; *bp ; bp += 2 + bp[0]) {
 		if (bp[0] == len && memcmp(bp + 2, name, len) == 0) {
+			if (!builtin_supported(name))
+				return -1;
 			*special = (bp[1] & BUILTIN_SPECIAL) != 0;
 			return bp[1] & ~BUILTIN_SPECIAL;
 		}
@@ -918,7 +943,10 @@ typecmd_impl(int argc, char **argv, int cmd, const char *path)
 			break;
 
 		case CMDBUILTIN:
-			if (!entry.special && cmd != TYPECMD_TYPE) {
+			if (!entry.special &&
+			    (!NEOASH_STANDARDS_PROFILE ||
+			        !is_intrinsic_builtin(entry.u.index)) &&
+			    cmd != TYPECMD_TYPE) {
 				char *fullname;
 
 				fullname = find_path_command(argv[i], path);

@@ -67,6 +67,8 @@ char *minusc;			/* argument to -c option */
 
 static int options(int);
 static void minus_o(char *, int);
+static int long_option_supported(int);
+static int short_option_supported(int);
 static void setoption(int, int);
 static void setoptionbyindex(int, int);
 static void setparam(int, char **);
@@ -95,7 +97,7 @@ procargs(int argc, char **argv)
 		sflag = 1;
 	if (iflag != 0 && sflag == 1 && isatty(0) && isatty(1)) {
 		iflag = 1;
-		if (Eflag == 2)
+		if (NEOASH_EXTENSIONS && Eflag == 2)
 			Eflag = 1;
 	}
 	if (mflag == 2)
@@ -210,7 +212,7 @@ options(int cmdline)
 				if (c_pending || minusc != NULL)
 					error("Bad -c option");
 				c_pending = 1;
-			} else if (c == 'l' && cmdline) {
+			} else if (c == 'l' && cmdline && NEOASH_EXTENSIONS) {
 				login = 1;
 			} else if (c == 'o') {
 				minus_o(*argptr, val);
@@ -260,7 +262,7 @@ end_options2:
 	 * Yes, this feature is in /bin/sh to help users write perl scripts.
 	 */
 	p = *argptr;
-	if (p != NULL && p[0] == '#' && p[1] == '\0') {
+	if (NEOASH_EXTENSIONS && p != NULL && p[0] == '#' && p[1] == '\0') {
 		while (*argptr != NULL)
 			argptr++;
 		/* We need to keep the final argument */
@@ -282,26 +284,62 @@ minus_o(char *name, int val)
 			/* "Pretty" output. */
 			out1str("Current option settings\n");
 			for (i = 0, on = optname; i < NOPTS; i++, on += *on + 1)
-				out1fmt("%-16.*s%s\n", *on, on + 1,
-					optval[i] ? "on" : "off");
+				if (long_option_supported(i))
+					out1fmt("%-16.*s%s\n", *on, on + 1,
+					    optval[i] ? "on" : "off");
 		} else {
 			/* Output suitable for re-input to shell. */
-			for (i = 0, on = optname; i < NOPTS; i++, on += *on + 1)
-				out1fmt("%s %co %.*s%s",
-				    i % 6 == 0 ? "set" : "",
-				    optval[i] ? '-' : '+',
-				    *on, on + 1,
-				    i % 6 == 5 || i == NOPTS - 1 ? "\n" : "");
+			if (NEOASH_EXTENSIONS) {
+				for (i = 0, on = optname; i < NOPTS;
+				    i++, on += *on + 1)
+					out1fmt("%s %co %.*s%s",
+					    i % 6 == 0 ? "set" : "",
+					    optval[i] ? '-' : '+',
+					    *on, on + 1,
+					    i % 6 == 5 || i == NOPTS - 1 ?
+					    "\n" : "");
+				return;
+			}
+			for (i = 0, on = optname; i < NOPTS; i++, on += *on + 1) {
+				if (!long_option_supported(i))
+					continue;
+				out1fmt("set %co %.*s\n", optval[i] ? '-' : '+',
+				    *on, on + 1);
+			}
 		}
 	} else {
 		len = strlen(name);
 		for (i = 0, on = optname; i < NOPTS; i++, on += *on + 1)
-			if (*on == len && memcmp(on + 1, name, len) == 0) {
+			if (long_option_supported(i) && *on == len &&
+			    memcmp(on + 1, name, len) == 0) {
 				setoptionbyindex(i, val);
 				return;
 			}
 		error("Illegal option -o %s", name);
 	}
+}
+
+static int
+long_option_supported(int idx)
+{
+	if (NEOASH_EXTENSIONS)
+		return 1;
+	if (&optval[idx] == &iflag || &optval[idx] == &sflag ||
+	    &optval[idx] == &Eflag ||
+	    &optval[idx] == &Tflag || &optval[idx] == &Pflag ||
+	    &optval[idx] == &hflag)
+		return 0;
+	if (&optval[idx] == &pipefailflag)
+		return NEOASH_HAS_POSIX_2024;
+	return 1;
+}
+
+static int
+short_option_supported(int flag)
+{
+	if (NEOASH_EXTENSIONS)
+		return 1;
+	return strchr("IVEPT", flag) == NULL;
 }
 
 
@@ -324,7 +362,7 @@ setoption(int flag, int val)
 	int i;
 
 	for (i = 0; i < NSHORTOPTS; i++)
-		if (optletter[i] == flag) {
+		if (optletter[i] == flag && short_option_supported(flag)) {
 			setoptionbyindex(i, val);
 			return;
 		}
@@ -390,7 +428,7 @@ shiftcmd(int argc, char **argv)
 	int i, n;
 
 	n = 1;
-	if (argc > 1 && strcmp(argv[1], "--") == 0)
+	if (NEOASH_EXTENSIONS && argc > 1 && strcmp(argv[1], "--") == 0)
 		argc--, argv++;
 	if (argc > 1)
 		n = number(argv[1]);

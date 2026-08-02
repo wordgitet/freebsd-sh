@@ -219,7 +219,8 @@ trapcmd(int argc __unused, char **argv)
 	int show_default = 0;
 	int force_default = 0;
 
-	while ((i = nextopt("lp")) != '\0') {
+	while ((i = nextopt(NEOASH_EXTENSIONS ? "lp" :
+	    (NEOASH_HAS_POSIX_2024 ? "p" : ""))) != '\0') {
 		switch (i) {
 		case 'l':
 			printsignals();

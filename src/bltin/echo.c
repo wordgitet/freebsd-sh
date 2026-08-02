@@ -51,24 +51,26 @@ main(int argc, char *argv[])
 	char c;
 	int count;
 	int nflag = 0;
-#ifndef eflag
+#if NEOASH_XSI
+	int eflag = 1;
+#else
 	int eflag = 0;
 #endif
 
 	ap = argv;
 	if (argc)
 		ap++;
+#if NEOASH_EXTENSIONS
 	if ((p = *ap) != NULL) {
 		if (equal(p, "-n")) {
 			nflag++;
 			ap++;
 		} else if (equal(p, "-e")) {
-#ifndef eflag
 			eflag++;
-#endif
 			ap++;
 		}
 	}
+#endif
 	while ((p = *ap++) != NULL) {
 		while ((c = *p++) != '\0') {
 			if (c == '\\' && eflag) {
@@ -99,7 +101,7 @@ main(int argc, char *argv[])
 		if (*ap)
 			putchar(' ');
 	}
-	if (! nflag)
+	if (!nflag)
 		putchar('\n');
 	return 0;
 }

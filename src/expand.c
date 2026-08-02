@@ -1169,7 +1169,7 @@ expmeta(char *enddir, char *name, struct arglist *arglist)
 			metaflag = 1;
 		else if (*p == '[') {
 			q = p + 1;
-			if (*q == '!' || *q == '^')
+			if (*q == '!' || (NEOASH_EXTENSIONS && *q == '^'))
 				q++;
 			for (;;) {
 				if (*q == CTLESC)
@@ -1445,7 +1445,7 @@ patmatch(const char *pattern, const char *string)
 
 			savep = p, saveq = q;
 			invert = 0;
-			if (*p == '!' || *p == '^') {
+			if (*p == '!' || (NEOASH_EXTENSIONS && *p == '^')) {
 				invert++;
 				p++;
 			}

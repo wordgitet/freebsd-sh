@@ -339,7 +339,7 @@ jobscmd(int argc __unused, char *argv[] __unused)
 	int ch, mode;
 
 	mode = SHOWJOBS_DEFAULT;
-	while ((ch = nextopt("lps")) != '\0') {
+	while ((ch = nextopt(NEOASH_EXTENSIONS ? "lps" : "lp")) != '\0') {
 		switch (ch) {
 		case 'l':
 			mode = SHOWJOBS_VERBOSE;

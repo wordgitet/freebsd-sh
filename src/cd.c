@@ -81,7 +81,7 @@ cdcmd(int argc __unused, char **argv __unused)
 	int errno1 = ENOENT;
 
 	phys = Pflag;
-	while ((ch = nextopt("eLP")) != '\0') {
+	while ((ch = nextopt(NEOASH_HAS_POSIX_2024 ? "eLP" : "LP")) != '\0') {
 		switch (ch) {
 		case 'e':
 			getcwderr = 1;

@@ -119,7 +119,7 @@ evalcmd(int argc, char **argv)
         char *concat;
         char **ap;
 
-        if (argc > 1 && strcmp(argv[1], "--") == 0)
+        if (NEOASH_EXTENSIONS && argc > 1 && strcmp(argv[1], "--") == 0)
                 argc--, argv++;
         if (argc > 1) {
                 p = argv[1];
@@ -884,6 +884,8 @@ isdeclarationcmd(struct narg *arg)
 	if (arg == NULL)
 		return (0);
 	while (mustexpandto(arg->text, "command")) {
+		if (!NEOASH_HAS_POSIX_2024)
+			return (0);
 		have_command = 1;
 		arg = &arg->next->narg;
 		if (arg == NULL)
@@ -896,8 +898,8 @@ isdeclarationcmd(struct narg *arg)
 		 */
 	}
 	return (mustexpandto(arg->text, "export") ||
-	    mustexpandto(arg->text, "readonly") ||
-	    (mustexpandto(arg->text, "local") &&
+	    (NEOASH_HAS_POSIX_2024 && mustexpandto(arg->text, "readonly")) ||
+	    (NEOASH_EXTENSIONS && mustexpandto(arg->text, "local") &&
 		(have_command || !isfunc("local"))));
 }
 
@@ -1519,7 +1521,7 @@ breakcmd(int argc, char **argv)
 	long n;
 	char *end;
 
-	if (argc > 1 && strcmp(argv[1], "--") == 0)
+	if (NEOASH_EXTENSIONS && argc > 1 && strcmp(argv[1], "--") == 0)
 		argc--, argv++;
 	if (argc > 1) {
 		/* Allow arbitrarily large numbers. */
@@ -1594,7 +1596,7 @@ returncmd(int argc, char **argv)
 	int ret;
 	int trapstatus;
 
-	if (argc > 1 && strcmp(argv[1], "--") == 0)
+	if (NEOASH_EXTENSIONS && argc > 1 && strcmp(argv[1], "--") == 0)
 		argc--, argv++;
 	trapstatus = gettrapstatus();
 	ret = argc > 1 ? number(argv[1]) :
@@ -1631,7 +1633,8 @@ execcmd(int argc, char **argv)
 	 * Because we have historically not supported any options,
 	 * only treat "--" specially.
 	 */
-	if (argc > 1 && strcmp(argv[1], "--") == 0)
+	if (NEOASH_HAS_POSIX_2024 && argc > 1 &&
+	    strcmp(argv[1], "--") == 0)
 		argc--, argv++;
 	if (argc > 1) {
 		saveiflag = iflag;

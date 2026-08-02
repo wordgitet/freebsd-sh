@@ -339,7 +339,8 @@ dotcmd(int argc, char **argv)
 	 * Because we have historically not supported any options,
 	 * only treat "--" specially.
 	 */
-	filename = argc > 2 && strcmp(argv[1], "--") == 0 ? argv[2] : argv[1];
+	filename = NEOASH_EXTENSIONS && argc > 2 &&
+	    strcmp(argv[1], "--") == 0 ? argv[2] : argv[1];
 
 	fullname = find_dot_file(filename);
 	INTOFF;
@@ -395,7 +396,7 @@ exitcmd(int argc, char **argv)
 {
 	if (stoppedjobs())
 		return 0;
-	if (argc > 1 && strcmp(argv[1], "--") == 0)
+	if (NEOASH_EXTENSIONS && argc > 1 && strcmp(argv[1], "--") == 0)
 		argc--, argv++;
 	if (argc > 1)
 		exitshell(number(argv[1]));
