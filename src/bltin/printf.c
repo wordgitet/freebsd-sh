@@ -444,7 +444,7 @@ printf_doformat(char *fmt, int *rval)
 	case 'a': case 'A': {
 		long double p;
 
-		if (!NEOASH_EXTENSIONS) {
+		if (!NEOASH_EXTENSIONS && !NEOASH_XSI) {
 			warnx("illegal format character %c", convch);
 			return (NULL);
 		}

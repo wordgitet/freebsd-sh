@@ -37,9 +37,15 @@
  * Echo command.
  */
 
+#ifdef SHELL
 #define main echocmd
-
 #include "bltin.h"
+#else
+#include <stdio.h>
+#include <string.h>
+#endif
+
+#include "../standards.h"
 
 /* #define eflag 1 */
 
@@ -62,10 +68,10 @@ main(int argc, char *argv[])
 		ap++;
 #if NEOASH_EXTENSIONS
 	if ((p = *ap) != NULL) {
-		if (equal(p, "-n")) {
+		if (strcmp(p, "-n") == 0) {
 			nflag++;
 			ap++;
-		} else if (equal(p, "-e")) {
+		} else if (strcmp(p, "-e") == 0) {
 			eflag++;
 			ap++;
 		}

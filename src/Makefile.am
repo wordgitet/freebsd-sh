@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) $(STANDARDS_CPPFLAGS) $(LIBEDIT_CFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
 AM_CFLAGS = $(AX_CFLAGS)
 
-bin_PROGRAMS = neoash
+bin_PROGRAMS = neoash neoash-echo neoash-kill neoash-printf neoash-test
 
 neoash_LDADD = $(LIBEDIT_LIBS)
 
@@ -20,6 +20,24 @@ nodist_neoash_SOURCES = \
 	nodes.c nodes.h \
 	syntax.c syntax.h \
 	token.h
+
+# These utilities share their implementations with the corresponding shell
+# builtins, but deliberately compile without SHELL.  The prefixed names keep
+# them from shadowing system utilities outside a controlled test PATH.
+UTILITY_CPPFLAGS = $(SHELL_EXT_CPPFLAGS) $(STANDARDS_CPPFLAGS) \
+	-I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
+
+neoash_echo_SOURCES = bltin/echo.c
+neoash_echo_CPPFLAGS = $(UTILITY_CPPFLAGS)
+
+neoash_kill_SOURCES = bltin/kill.c compat/signames.c
+neoash_kill_CPPFLAGS = $(UTILITY_CPPFLAGS)
+
+neoash_printf_SOURCES = bltin/printf.c compat/strlfuncs.c
+neoash_printf_CPPFLAGS = $(UTILITY_CPPFLAGS)
+
+neoash_test_SOURCES = bltin/test.c
+neoash_test_CPPFLAGS = $(UTILITY_CPPFLAGS)
 
 BUILT_SOURCES = token.h builtins.h builtins.c nodes.h nodes.c syntax.h syntax.c
 CLEANFILES = $(BUILT_SOURCES) mknodes mksyntax
