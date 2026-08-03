@@ -100,7 +100,6 @@ main(int argc, char *argv[])
 	int end, rval;
 	char *format, *fmt, *start;
 #ifndef SHELL
-	int ch;
 
 	(void) setlocale(LC_ALL, "");
 #endif
@@ -109,16 +108,6 @@ main(int argc, char *argv[])
 	nextopt("");
 	argc -= argptr - argv;
 	argv = argptr;
-#else
-	while ((ch = getopt(argc, argv, "")) != -1)
-		switch (ch) {
-		case '?':
-		default:
-			usage();
-			return (1);
-		}
-	argc -= optind;
-	argv += optind;
 #endif
 
 	if (argc < 1) {
