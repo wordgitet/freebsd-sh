@@ -48,7 +48,7 @@ neoash_test_SOURCES = bltin/test.c
 neoash_test_CPPFLAGS = $(UTILITY_CPPFLAGS)
 
 install-exec-hook:
-	for u in cd pwd read wait umask true false getopts; do \
+	for u in alias cd pwd read unalias wait umask true false getopts; do \
 		ln -sf neoash$(EXEEXT) '$(DESTDIR)$(bindir)/'$$u$(EXEEXT); \
 	done
 	for u in echo printf test kill; do \

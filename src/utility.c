@@ -22,10 +22,12 @@
 #include "memalloc.h"
 
 static const char *const standalone_utilities[] = {
+	"alias",
 	"cd",
 	"chdir",
 	"pwd",
 	"read",
+	"unalias",
 	"wait",
 	"umask",
 	"true",
