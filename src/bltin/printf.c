@@ -108,6 +108,9 @@ main(int argc, char *argv[])
 	nextopt("");
 	argc -= argptr - argv;
 	argv = argptr;
+#else
+	argc--;
+	argv++;
 #endif
 
 	if (argc < 1) {
