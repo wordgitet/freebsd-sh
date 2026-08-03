@@ -109,6 +109,7 @@ static struct job *jobtab;	/* array of jobs */
 static int njobs;		/* size of array */
 static pid_t backgndpid = -1;	/* pid of last background process */
 static struct job *bgjob = NULL; /* last background process */
+static int async_list_depth;
 #if JOBS
 static struct job *jobmru;	/* most recently used job list */
 static pid_t initialpgrp;	/* pgrp of shell on invocation */
@@ -150,6 +151,30 @@ static int showjobs_active;
  */
 
 static int jobctl;
+
+void
+enter_async_list(void)
+{
+
+	async_list_depth++;
+}
+
+
+void
+leave_async_list(void)
+{
+
+	if (async_list_depth > 0)
+		async_list_depth--;
+}
+
+
+int
+in_async_list(void)
+{
+
+	return async_list_depth > 0;
+}
 
 #if JOBS
 static void
@@ -269,7 +294,7 @@ fgcmd(int argc __unused, char **argv __unused)
 	restartjob(jp);
 	jp->foreground = 1;
 	INTOFF;
-	status = waitforjob(jp, (int *)NULL);
+	status = waitforjob(jp, (int *)NULL, 0);
 	INTON;
 	return status;
 }
@@ -928,6 +953,8 @@ forkshell(struct job *jp, union node *n, int mode)
 {
 	pid_t pid;
 	pid_t pgrp;
+	int async_ign;
+	void (*saveint)(int), (*savequit)(int);
 
 	TRACE(("forkshell(%%%td, %p, %d) called\n", jp - jobtab, (void *)n,
 	    mode));
@@ -937,7 +964,17 @@ forkshell(struct job *jp, union node *n, int mode)
 	if (mode == FORK_BG && rootshell && mflag)
 		flushinput();
 	flushall();
+	async_ign = !mflag && (mode == FORK_BG ||
+	    (mode == FORK_FG && in_async_list()));
+	if (async_ign) {
+		saveint = signal(SIGINT, SIG_IGN);
+		savequit = signal(SIGQUIT, SIG_IGN);
+	}
 	pid = fork();
+	if (async_ign && pid != 0) {
+		signal(SIGINT, saveint);
+		signal(SIGQUIT, savequit);
+	}
 	if (pid == -1) {
 		TRACE(("Fork failed, errno=%d\n", errno));
 		INTON;
@@ -949,6 +986,17 @@ forkshell(struct job *jp, union node *n, int mode)
 		int i;
 
 		TRACE(("Child shell %d\n", (int)getpid()));
+		if (mode == FORK_BG)
+			enter_async_list();
+		if (mode == FORK_BG || (mode == FORK_FG && in_async_list() && !mflag)) {
+			/*
+			 * Ignore job-control signals before any other child
+			 * setup so a racing parent cannot deliver SIGINT or
+			 * SIGQUIT before we finish fork setup.
+			 */
+			signal(SIGINT, SIG_IGN);
+			signal(SIGQUIT, SIG_IGN);
+		}
 		wasroot = rootshell;
 		rootshell = 0;
 		handler = &main_handler;
@@ -1077,6 +1125,10 @@ vforkexecshell(struct job *jp, char **argv, char **envp, const char *path, int i
 	}
 	if (pid == 0) {
 		TRACE(("Child shell %d\n", (int)getpid()));
+		if (in_async_list() && !mflag) {
+			signal(SIGINT, SIG_IGN);
+			signal(SIGQUIT, SIG_IGN);
+		}
 		if (setjmp(jmploc.loc))
 			_exit(exitstatus);
 		if (pip != NULL) {
@@ -1126,7 +1178,7 @@ vforkexecshell(struct job *jp, char **argv, char **envp, const char *path, int i
  */
 
 int
-waitforjob(struct job *jp, int *signaled)
+waitforjob(struct job *jp, int *signaled, int wflags)
 {
 #if JOBS
 	int propagate_int = jp->jobctl && jp->foreground;
@@ -1138,7 +1190,8 @@ waitforjob(struct job *jp, int *signaled)
 	INTOFF;
 	jobno = jp - jobtab;
 	TRACE(("waitforjob(%%%td) called\n", jp - jobtab + 1));
-	while ((jp = jobtab + jobno)->state == 0)
+	while ((jp = jobtab + jobno)->state == 0 ||
+	    ((wflags & WFJ_UNTILDONE) && jp->state == JOBSTOPPED))
 		if (dowait(DOWAIT_BLOCK | (Tflag ? DOWAIT_SIG |
 		    DOWAIT_SIG_TRAP : 0), jp) == -1) {
 			dotrap();

@@ -480,7 +480,8 @@ list(int nlflag)
 			tok = readtoken();
 			/* FALLTHROUGH */
 		case TNL:
-			if (tok == TNL) {
+		case TBLANK:
+			if (tok == TNL || tok == TBLANK) {
 				parseheredoc();
 				if (nlflag)
 					return ntop;

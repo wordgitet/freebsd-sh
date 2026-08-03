@@ -53,12 +53,18 @@ void showjobs(int, int);
 struct job *makejob(union node *, int);
 pid_t forkshell(struct job *, union node *, int);
 pid_t vforkexecshell(struct job *, char **, char **, const char *, int, int [2]);
-int waitforjob(struct job *, int *);
+#define WFJ_UNTILDONE 01	/* wait through job-control stop (&&/||) */
+
+int waitforjob(struct job *, int *, int);
 int stoppedjobs(void);
 int backgndpidset(void);
 pid_t backgndpidval(void);
 char *commandtext(union node *);
 char *commandtextnl(union node *);
+
+void enter_async_list(void);
+void leave_async_list(void);
+int in_async_list(void);
 
 #if ! JOBS
 #define setjobctl(on)	/* do nothing */

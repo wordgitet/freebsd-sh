@@ -86,7 +86,7 @@ static void evalsubshell(union node *, int);
 static void evalredir(union node *, int);
 static void exphere(union node *, struct arglist *);
 static void expredir(union node *);
-static void evalpipe(union node *);
+static void evalpipe(union node *, int);
 static int is_valid_fast_cmdsubst(union node *n);
 static union node *deferredcmdsubsttree(union node *n);
 static int is_deferred_fast_trap(const char *s);
@@ -308,7 +308,7 @@ evaltree(union node *n, int flags)
 			break;
 
 		case NPIPE:
-			evalpipe(n);
+			evalpipe(n, flags & EV_TESTED);
 			do_etest = !(flags & EV_TESTED);
 			break;
 		case NCMD:
@@ -474,7 +474,8 @@ evalsubshell(union node *n, int flags)
 		evaltree(n->nredir.n, flags | EV_EXIT);	/* never returns */
 	} else if (! backgnd) {
 		INTOFF;
-		exitstatus = waitforjob(jp, (int *)NULL);
+		exitstatus = waitforjob(jp, (int *)NULL,
+		    (flags & EV_TESTED) ? WFJ_UNTILDONE : 0);
 		INTON;
 	} else
 		exitstatus = 0;
@@ -608,7 +609,7 @@ expredir(union node *n)
  */
 
 static void
-evalpipe(union node *n)
+evalpipe(union node *n, int tested)
 {
 	struct job *jp;
 	struct nodelist *lp;
@@ -660,7 +661,8 @@ evalpipe(union node *n)
 	INTON;
 	if (n->npipe.backgnd == 0) {
 		INTOFF;
-		exitstatus = waitforjob(jp, (int *)NULL);
+		exitstatus = waitforjob(jp, (int *)NULL,
+		    tested ? WFJ_UNTILDONE : 0);
 		TRACE(("evalpipe:  job done exit status %d\n", exitstatus));
 		INTON;
 	} else
@@ -1245,7 +1247,7 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		    cmd->ncmd.redirect == NULL &&
 		    varlist.count == 0 &&
 		    (mode == FORK_FG || mode == FORK_NOJOB) &&
-		    !disvforkset() && !iflag && !mflag) {
+		    !disvforkset() && !iflag && !mflag && !in_async_list()) {
 			vforkexecshell(jp, argv, environment(), path,
 			    cmdentry.u.index, flags & EV_BACKCMD ? pip : NULL);
 			goto parent;
@@ -1373,6 +1375,8 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		nextopt_optptr = NULL;		/* initialize nextopt */
 		builtin_flags = flags;
 		cmdsub_status = exitstatus;
+		if (cmdentry.u.index == EVALCMD && had_cmdsub)
+			oexitstatus = exitstatus;
 		exitstatus = (*builtinfunc[cmdentry.u.index])(argc, argv);
 		if (argc == 0 && had_cmdsub)
 			exitstatus = cmdsub_status;
@@ -1427,7 +1431,8 @@ cmddone:
 parent:	/* parent process gets here (if we forked) */
 	if (mode == FORK_FG) {	/* argument to fork */
 		INTOFF;
-		exitstatus = waitforjob(jp, &signaled);
+		exitstatus = waitforjob(jp, &signaled,
+		    (flags & EV_TESTED) ? WFJ_UNTILDONE : 0);
 		INTON;
 		if (iflag && loopnest > 0 && signaled) {
 			evalskip = SKIPBREAK;
