@@ -1,4 +1,4 @@
-AC_INIT([neoash], [15.1-ver34])
+AC_INIT([neoash], [15.1-ver35])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config-compat.h])
@@ -66,7 +66,14 @@ STANDARDS_CPPFLAGS="-DNEOASH_POSIX_VERSION=${neoash_posix_version}L -DNEOASH_XOP
 AC_SUBST([STANDARDS_CPPFLAGS])
 AC_MSG_NOTICE([neoash standards profile: POSIX=$with_posix_version X/Open=$with_xopen_version])
 
-
+AC_ARG_ENABLE([standalone-utilities],
+    [AS_HELP_STRING([--enable-standalone-utilities],
+        [build optional neoash-echo, neoash-kill, neoash-printf, and neoash-test @<:@default=no@:>@])],
+    [],
+    [enable_standalone_utilities=no])
+AM_CONDITIONAL([BUILD_STANDALONE_UTILITIES],
+    [test "x$enable_standalone_utilities" = "xyes"])
+AC_MSG_NOTICE([standalone utilities: $enable_standalone_utilities])
 
 AC_MSG_CHECKING([for build system compiler])
 if test "$cross_compiling" = yes; then

@@ -41,6 +41,8 @@
 #define main echocmd
 #include "bltin.h"
 #else
+#include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #endif
@@ -48,6 +50,25 @@
 #include "../standards.h"
 
 /* #define eflag 1 */
+
+#ifdef SHELL
+static int
+echo_putchar(int c)
+{
+	putchar(c);
+	return 0;
+}
+#else
+static int
+echo_putchar(int c)
+{
+	if (putchar(c) == EOF && errno == EPIPE) {
+		fprintf(stderr, "echo: write error: Broken pipe\n");
+		return 1;
+	}
+	return 0;
+}
+#endif
 
 int
 main(int argc, char *argv[])
@@ -66,6 +87,9 @@ main(int argc, char *argv[])
 	ap = argv;
 	if (argc)
 		ap++;
+#ifndef SHELL
+	(void)signal(SIGPIPE, SIG_IGN);
+#endif
 #if NEOASH_EXTENSIONS
 	if ((p = *ap) != NULL) {
 		if (strcmp(p, "-n") == 0) {
@@ -102,12 +126,19 @@ main(int argc, char *argv[])
 					break;
 				}
 			}
-			putchar(c);
+			if (echo_putchar(c))
+				return 1;
 		}
-		if (*ap)
-			putchar(' ');
+		if (*ap && echo_putchar(' '))
+			return 1;
 	}
-	if (!nflag)
-		putchar('\n');
+	if (!nflag && echo_putchar('\n'))
+		return 1;
+#ifndef SHELL
+	if (fflush(stdout) != 0 && errno == EPIPE) {
+		fprintf(stderr, "echo: write error: Broken pipe\n");
+		return 1;
+	}
+#endif
 	return 0;
 }

@@ -1,19 +1,23 @@
 AM_CPPFLAGS = -DSHELL $(SHELL_EXT_CPPFLAGS) $(STANDARDS_CPPFLAGS) $(LIBEDIT_CFLAGS) -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
 AM_CFLAGS = $(AX_CFLAGS)
 
-bin_PROGRAMS = neoash neoash-echo neoash-kill neoash-printf neoash-test
+bin_PROGRAMS = neoash
+
+if BUILD_STANDALONE_UTILITIES
+bin_PROGRAMS += neoash-echo neoash-kill neoash-printf neoash-test
+endif
 
 neoash_LDADD = $(LIBEDIT_LIBS)
 
 neoash_SOURCES = \
 	alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
 	histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
-	mystring.c options.c output.c parser.c redir.c show.c trap.c var.c \
+	mystring.c options.c output.c parser.c redir.c show.c trap.c utility.c var.c \
 	bltin/echo.c bltin/kill.c bltin/printf.c bltin/test.c \
 	compat/mktemp.c compat/setmode.c compat/signames.c compat/strlfuncs.c \
 	alias.h arith.h arith_yacc.h cd.h error.h eval.h exec.h expand.h \
 	input.h jobs.h mail.h main.h memalloc.h myhistedit.h mystring.h \
-	options.h output.h parser.h redir.h shell.h show.h standards.h trap.h var.h
+	options.h output.h parser.h redir.h shell.h show.h standards.h trap.h utility.h var.h
 
 nodist_neoash_SOURCES = \
 	builtins.c builtins.h \
@@ -21,14 +25,18 @@ nodist_neoash_SOURCES = \
 	syntax.c syntax.h \
 	token.h
 
-# These utilities share their implementations with the corresponding shell
-# builtins, but deliberately compile without SHELL.  The prefixed names keep
-# them from shadowing system utilities outside a controlled test PATH.
-UTILITY_CPPFLAGS = $(SHELL_EXT_CPPFLAGS) $(STANDARDS_CPPFLAGS) \
+if BUILD_STANDALONE_UTILITIES
+# Standalone copies of selected builtins (no -DSHELL).  Prefixed names avoid
+# shadowing system utilities when prepended to PATH.
+UTILITY_BASE_CPPFLAGS = $(SHELL_EXT_CPPFLAGS) \
 	-I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir) -I.
+UTILITY_CPPFLAGS = $(UTILITY_BASE_CPPFLAGS) $(STANDARDS_CPPFLAGS)
+# External echo follows XPG4/XSI semantics (-n is an operand, escapes on).
+UTILITY_XSI_ECHO_CPPFLAGS = $(UTILITY_BASE_CPPFLAGS) \
+	-DNEOASH_POSIX_VERSION=200809L -DNEOASH_XOPEN_VERSION=700
 
 neoash_echo_SOURCES = bltin/echo.c
-neoash_echo_CPPFLAGS = $(UTILITY_CPPFLAGS)
+neoash_echo_CPPFLAGS = $(UTILITY_XSI_ECHO_CPPFLAGS)
 
 neoash_kill_SOURCES = bltin/kill.c compat/signames.c
 neoash_kill_CPPFLAGS = $(UTILITY_CPPFLAGS)
@@ -38,6 +46,16 @@ neoash_printf_CPPFLAGS = $(UTILITY_CPPFLAGS)
 
 neoash_test_SOURCES = bltin/test.c
 neoash_test_CPPFLAGS = $(UTILITY_CPPFLAGS)
+
+install-exec-hook:
+	for u in cd pwd read wait umask true false getopts; do \
+		ln -sf neoash$(EXEEXT) '$(DESTDIR)$(bindir)/'$$u$(EXEEXT); \
+	done
+	for u in echo printf test kill; do \
+		ln -sf neoash-$$u$(EXEEXT) '$(DESTDIR)$(bindir)/'$$u$(EXEEXT); \
+	done
+	ln -sf neoash-test$(EXEEXT) '$(DESTDIR)$(bindir)/['$(EXEEXT)
+endif
 
 BUILT_SOURCES = token.h builtins.h builtins.c nodes.h nodes.c syntax.h syntax.c
 CLEANFILES = $(BUILT_SOURCES) mknodes mksyntax

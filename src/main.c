@@ -65,6 +65,7 @@
 #include "cd.h"
 #include "redir.h"
 #include "builtins.h"
+#include "utility.h"
 #ifndef NO_HISTORY
 #include "myhistedit.h"
 #endif
@@ -148,6 +149,13 @@ main(int argc, char *argv[])
 		sh_progname = p ? p + 1 : argv[0];
 	}
 #endif
+	{
+		const char *utility;
+
+		utility = standalone_utility_name(argv[0]);
+		if (utility != NULL)
+			return (standalone_utility_main(argc, argv, utility));
+	}
 	/*
 	 * As smark is accessed after a longjmp, it cannot be a local in main().
 	 * The C standard specifies that the values of non-volatile local
