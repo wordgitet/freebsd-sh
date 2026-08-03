@@ -65,3 +65,36 @@
 /test-posix/yash/ptwrap
 /test-posix/yash/resetsig
 /test-posix/yash/tmp.*
+
+# Standalone utility binaries (--enable-standalone-utilities)
+/src/neoash-echo
+/src/neoash-kill
+/src/neoash-printf
+/src/neoash-test
+
+# yash POSIX suite local build artifacts
+/test-posix/yash/selfsig
+
+# vendored libedit autotools noise (tracked tree + local re-configure)
+/vendor/libedit/autom4te.cache/
+/vendor/libedit/configure~
+/vendor/libedit/config.guess~
+/vendor/libedit/config.sub~
+/vendor/libedit/config.h.in~
+/vendor/libedit/config.h
+/vendor/libedit/config.log
+/vendor/libedit/config.status
+/vendor/libedit/Makefile
+/vendor/libedit/src/Makefile
+/vendor/libedit/src/.libs/
+/vendor/libedit/src/.deps/
+/vendor/libedit/src/*.o
+/vendor/libedit/src/*.lo
+/vendor/libedit/src/*.la
+/vendor/libedit/libedit.pc
+/vendor/libedit/stamp-h1
+
+# Editor / patch droppings
+*.orig
+*.rej
+*~
