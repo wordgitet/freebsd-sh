@@ -73,6 +73,7 @@
 
 static int	 asciicode(void);
 static char	*printf_doformat(char *, int *);
+static void	 print_bstring(const char *, char *, size_t, int, int, int, int);
 static int	 escape(char *, int, size_t *);
 static char	*unescape(const char *, bool *);
 static int	 getchr(void);
@@ -393,9 +394,12 @@ printf_doformat(char *fmt, int *rval)
 			warnx("%s", strerror(ENOMEM));
 			return (NULL);
 		}
-		if (convch == 'b')
+		if (convch == 'b') {
 			getout = escape(p, 0, &len);
-		PF(start, skipesc ? (p + 2) : p);
+			print_bstring(start, p, len, havewidth, haveprec,
+			    fieldwidth, precision);
+		} else
+			PF(start, skipesc ? (p + 2) : p);
 		/* Restore format for next loop. */
 
 		free(p);
@@ -461,6 +465,38 @@ printf_doformat(char *fmt, int *rval)
 	*fmt = nextch;
 	/* return the gargv to the next element */
 	return (fmt);
+}
+
+static void
+print_bstring(const char *fmt, char *p, size_t len, int havewidth,
+    int haveprec, int fieldwidth, int precision)
+{
+	char conv[64];
+	const char *s;
+	size_t off;
+
+	s = strrchr(fmt, 's');
+	if (s == NULL) {
+		fwrite(p, 1, len, stdout);
+		return;
+	}
+	off = (size_t)(s - fmt);
+	if (off + 4 >= sizeof(conv)) {
+		fwrite(p, 1, len, stdout);
+		return;
+	}
+	memcpy(conv, fmt, off);
+	memcpy(conv + off, ".*s", 3);
+	conv[off + 3] = '\0';
+	if (havewidth) {
+		if (haveprec)
+			(void)printf(conv, fieldwidth, precision, (int)len, p);
+		else
+			(void)printf(conv, fieldwidth, (int)len, p);
+	} else if (haveprec)
+		(void)printf(conv, precision, (int)len, p);
+	else
+		fwrite(p, 1, len, stdout);
 }
 
 static char *
