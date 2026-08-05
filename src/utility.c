@@ -6,6 +6,8 @@
  * pwd, read, and so on.
  */
 
+#include <signal.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "shell.h"
@@ -69,6 +71,8 @@ standalone_utility_main(int argc, char **argv, const char *name)
 	if (setjmp(main_handler.loc))
 		return (exitstatus);
 
+	(void)signal(SIGPIPE, SIG_IGN);
+
 	rootpid = getpid();
 	rootshell = 1;
 	INTOFF;
@@ -98,8 +102,9 @@ standalone_utility_main(int argc, char **argv, const char *name)
 	status = (*builtinfunc[idx])(argc, argv);
 	flushall();
 	if (outiserror(out1)) {
-		if (status == 0 || status == 1)
-			status = 2;
+		fprintf(stderr, "%s: write error: Broken pipe\n", name);
+		if (status == 0)
+			status = 1;
 	}
 	handler = savehandler;
 
