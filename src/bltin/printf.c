@@ -113,6 +113,11 @@ main(int argc, char *argv[])
 	argv++;
 #endif
 
+	if (argc > 0 && strcmp(argv[0], "--") == 0) {
+		argc--;
+		argv++;
+	}
+
 	if (argc < 1) {
 		usage();
 		return (1);
