@@ -115,20 +115,41 @@ Every commit that modifies code or build configurations must bump the project ve
 
 This project is POSIX-first.
 
-- The imported yash POSIX suite is the primary release-blocking
-  correctness gate.
-- The imported FreeBSD sh regression suite is a secondary guardrail
-  used to catch accidental breakage while POSIX fixes land.
+- The **primary release-blocking gate** is a **licensed POSIX conformance
+  test suite** maintained **out of tree** (not shipped with this
+  repository). Run it from a private install; use its journals and
+  pass/fail results to decide correctness. Do not commit suite sources,
+  scenario files, or journal excerpts to this repo.
+- The imported **yash POSIX suite** (`test-posix/yash`) is a **fast
+  regression guardrail** while conformance work lands. When the
+  licensed suite and yash disagree, **prefer the licensed suite** for
+  product behavior unless you have confirmed a harness or environment
+  limitation (missing locale, PTY, privileges, etc.).
+- The imported **FreeBSD sh** regression suite is a tertiary guardrail
+  for accidental breakage in areas both suites touch.
 - When POSIX behavior conflicts with legacy FreeBSD behavior, POSIX
   wins by default.
-- Use yash behavior and the POSIX text as the main semantic reference.
-  Dash may be used as a secondary datapoint, but not as the primary
-  model.
+- Use the **POSIX standard text** as the normative spec. Use **yash**
+  and **dash** only as secondary behavioral datapoints, not as the
+  primary model when they conflict with the licensed conformance gate.
+
+### Licensed conformance testing (agents)
+
+- Workflow and suite layout for local runs live in **private** paths
+  (e.g. `private/`); keep them **gitignored** and out of public
+  releases.
+- In commit messages and public docs, say **“licensed POSIX conformance
+  suite”** or **“private conformance run”**; avoid pasting assertion
+  text, test scripts, or journal diffs.
+- Classify failures as **shell bug**, **harness/env**, or **untested**
+  using journal evidence locally; do not vendor harness fixes into
+  `test-posix/`.
 
 ### Performance guardrails
 
 - Preserve the current fast non-interactive execution paths unless a
-  failing POSIX test proves a hot-path change is necessary.
+  failing conformance or POSIX test proves a hot-path change is
+  necessary.
 - Prefer fixes that are conditional on interactive mode, job control,
   trap handling, or special builtin/error paths.
 - Tiny regressions only are acceptable on hot paths. Redesign fixes
@@ -136,10 +157,14 @@ This project is POSIX-first.
 
 ### Test workflow
 
-- Use `make TESTEE=./src/neoash test-posix-report` as the main
-  correctness scoreboard.
-- Use `make TESTEE=./src/neoash test-posix-nosignal-report` for
-  faster iteration when working outside signals and job control.
-- Use `make TESTEE=./src/neoash test-posix-freebsd` as a secondary
-  regression pass after changes in `cd`, `wait`, parser/error
-  behavior, or traps/job control.
+- **Release gate:** run the full licensed conformance campaign locally
+  (shell, utilities, and UPE scenarios as applicable). Record
+  pass/fail/untested/unresolved totals from journals; do not commit
+  the journals.
+- **Iteration:** `make TESTEE=./src/neoash test-posix-report` for broad
+  POSIX-facing regression (yash import).
+- **Faster iteration:** `make TESTEE=./src/neoash test-posix-nosignal-report`
+  when not touching signals or job control.
+- **Extra guardrail:** `make TESTEE=./src/neoash test-posix-freebsd`
+  after changes in `cd`, `wait`, parser/error behavior, or
+  traps/job control.
