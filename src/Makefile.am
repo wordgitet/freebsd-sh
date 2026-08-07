@@ -12,12 +12,12 @@ neoash_LDADD = $(LIBEDIT_LIBS)
 neoash_SOURCES = \
 	alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
 	histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
-	mystring.c options.c output.c parser.c redir.c show.c trap.c utility.c var.c \
+	mystring.c options.c output.c parser.c redir.c show.c trap.c util.c var.c \
 	bltin/echo.c bltin/kill.c bltin/printf.c bltin/test.c \
 	compat/mktemp.c compat/setmode.c compat/signames.c compat/strlfuncs.c \
 	alias.h arith.h arith_yacc.h cd.h error.h eval.h exec.h expand.h \
 	input.h jobs.h mail.h main.h memalloc.h myhistedit.h mystring.h \
-	options.h output.h parser.h redir.h shell.h show.h standards.h trap.h utility.h var.h
+	options.h output.h parser.h redir.h shell.h show.h standards.h trap.h util.h var.h
 
 nodist_neoash_SOURCES = \
 	builtins.c builtins.h \

@@ -65,7 +65,7 @@
 #include "cd.h"
 #include "redir.h"
 #include "builtins.h"
-#include "utility.h"
+#include "util.h"
 #ifndef NO_HISTORY
 #include "myhistedit.h"
 #endif
