@@ -964,7 +964,7 @@ forkshell(struct job *jp, union node *n, int mode)
 	if (mode == FORK_BG && rootshell && mflag)
 		flushinput();
 	flushall();
-	async_ign = !mflag && (mode == FORK_BG ||
+	async_ign = !iflag && !mflag && (mode == FORK_BG ||
 	    (mode == FORK_FG && in_async_list()));
 	if (async_ign) {
 		saveint = signal(SIGINT, SIG_IGN);
@@ -988,7 +988,8 @@ forkshell(struct job *jp, union node *n, int mode)
 		TRACE(("Child shell %d\n", (int)getpid()));
 		if (mode == FORK_BG)
 			enter_async_list();
-		if (mode == FORK_BG || (mode == FORK_FG && in_async_list() && !mflag)) {
+		if (!iflag && !mflag && (mode == FORK_BG ||
+		    (mode == FORK_FG && in_async_list()))) {
 			/*
 			 * Ignore job-control signals before any other child
 			 * setup so a racing parent cannot deliver SIGINT or
@@ -1125,7 +1126,7 @@ vforkexecshell(struct job *jp, char **argv, char **envp, const char *path, int i
 	}
 	if (pid == 0) {
 		TRACE(("Child shell %d\n", (int)getpid()));
-		if (in_async_list() && !mflag) {
+		if (in_async_list() && !iflag && !mflag) {
 			signal(SIGINT, SIG_IGN);
 			signal(SIGQUIT, SIG_IGN);
 		}

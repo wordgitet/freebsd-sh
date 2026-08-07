@@ -282,11 +282,8 @@ trapcmd(int argc __unused, char **argv)
 		trap[signo] = action;
 		if (signo != 0) {
 			trap_force_signo = signo;
-			if (force_default) {
-				siginherited[signo] = 0;
-				if (is_tty_stopsig(signo))
-					trap_default_signo = signo;
-			}
+			if (force_default && is_tty_stopsig(signo) && iflag)
+				trap_default_signo = signo;
 			setsignal(signo);
 			trap_default_signo = 0;
 			trap_force_signo = 0;
@@ -414,7 +411,7 @@ setsignal(int signo)
 	if (trap_default_signo == signo &&
 	    (*t == S_HARD_IGN || *t == S_IGN))
 		*t = S_RESET;
-	if (*t == S_HARD_IGN && trap_force_signo == signo &&
+	if (*t == S_HARD_IGN && trap_force_signo == signo && iflag &&
 	    !tty_stopsig_preserve_ign(signo))
 		*t = S_RESET;
 	if (*t == S_HARD_IGN || *t == action)
