@@ -84,6 +84,18 @@ static unsigned char sh_complete(EditLine *, int);
 #endif
 static unsigned char sh_vi_expand(EditLine *, int);
 
+static int
+histedit_ttyfd(void)
+{
+	if (isatty(2))
+		return 2;
+	if (isatty(1))
+		return 1;
+	if (isatty(0))
+		return 0;
+	return -1;
+}
+
 static const char *
 get_histfile(void)
 {
@@ -180,20 +192,26 @@ histedit(void)
 			 * turn editing on
 			 */
 			char *term;
+			FILE *el_err;
+			int ttyfd;
 
 			INTOFF;
+			ttyfd = histedit_ttyfd();
+			if (ttyfd < 0)
+				goto bad;
 			if (el_in == NULL)
 				el_in = fdopen(0, "r");
 			if (el_out == NULL)
-				el_out = fdopen(2, "w");
-			if (el_in == NULL || el_out == NULL)
+				el_out = fdopen(ttyfd, "w");
+			el_err = fdopen(2, "w");
+			if (el_in == NULL || el_out == NULL || el_err == NULL)
 				goto bad;
 			term = lookupvar("TERM");
 			if (term)
 				setenv("TERM", term, 1);
 			else
 				unsetenv("TERM");
-			el = el_init(arg0, el_in, el_out, el_out);
+			el = el_init_fd(arg0, el_in, el_out, el_err, 0, ttyfd, 2);
 			if (el != NULL) {
 				if (hist)
 					el_set(el, EL_HIST, history, hist);
