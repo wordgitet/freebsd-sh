@@ -471,32 +471,44 @@ static void
 print_bstring(const char *fmt, char *p, size_t len, int havewidth,
     int haveprec, int fieldwidth, int precision)
 {
-	char conv[64];
-	const char *s;
-	size_t off;
+	const char *dot;
+	int fieldlen;
+	size_t outlen, padding;
+	bool leftjust;
 
-	s = strrchr(fmt, 's');
-	if (s == NULL) {
-		fwrite(p, 1, len, stdout);
-		return;
+	outlen = len;
+	if (haveprec) {
+		if (precision >= 0 && outlen > (size_t)precision)
+			outlen = (size_t)precision;
+	} else if ((dot = strchr(fmt, '.')) != NULL) {
+		uintmax_t limit;
+
+		limit = strtoumax(dot + 1, NULL, 10);
+		if (limit < (uintmax_t)outlen)
+			outlen = (size_t)limit;
 	}
-	off = (size_t)(s - fmt);
-	if (off + 4 >= sizeof(conv)) {
-		fwrite(p, 1, len, stdout);
-		return;
-	}
-	memcpy(conv, fmt, off);
-	memcpy(conv + off, ".*s", 3);
-	conv[off + 3] = '\0';
+
 	if (havewidth) {
 		if (haveprec)
-			(void)printf(conv, fieldwidth, precision, (int)len, p);
+			fieldlen = snprintf(NULL, 0, fmt, fieldwidth, precision, "");
 		else
-			(void)printf(conv, fieldwidth, (int)len, p);
+			fieldlen = snprintf(NULL, 0, fmt, fieldwidth, "");
 	} else if (haveprec)
-		(void)printf(conv, precision, (int)len, p);
+		fieldlen = snprintf(NULL, 0, fmt, precision, "");
 	else
-		fwrite(p, 1, len, stdout);
+		fieldlen = snprintf(NULL, 0, fmt, "");
+	leftjust = strchr(fmt, '-') != NULL ||
+	    (havewidth && fieldwidth < 0);
+	if (fieldlen > 0 && (size_t)fieldlen > outlen)
+		padding = (size_t)fieldlen - outlen;
+	else
+		padding = 0;
+
+	while (!leftjust && padding-- > 0)
+		putchar(' ');
+	fwrite(p, 1, outlen, stdout);
+	while (leftjust && padding-- > 0)
+		putchar(' ');
 }
 
 static char *
