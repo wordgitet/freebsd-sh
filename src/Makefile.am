@@ -4,7 +4,8 @@ AM_CFLAGS = $(AX_CFLAGS)
 bin_PROGRAMS = neoash
 
 if BUILD_STANDALONE_UTILITIES
-bin_PROGRAMS += neoash-echo neoash-kill neoash-printf neoash-test
+bin_PROGRAMS += neoash-echo neoash-kill neoash-printf neoash-test \
+	neoash-pwd neoash-true neoash-false
 endif
 
 neoash_LDADD = $(LIBEDIT_LIBS)
@@ -46,12 +47,18 @@ neoash_printf_CPPFLAGS = $(UTILITY_CPPFLAGS)
 
 neoash_test_SOURCES = bltin/test.c
 neoash_test_CPPFLAGS = $(UTILITY_CPPFLAGS)
+neoash_pwd_SOURCES = bltin/pwd.c
+neoash_pwd_CPPFLAGS = $(UTILITY_CPPFLAGS)
+neoash_true_SOURCES = bltin/true.c
+neoash_true_CPPFLAGS = $(UTILITY_CPPFLAGS)
+neoash_false_SOURCES = bltin/false.c
+neoash_false_CPPFLAGS = $(UTILITY_CPPFLAGS)
 
 install-exec-hook:
-	for u in alias cd pwd read unalias wait umask true false getopts; do \
+	for u in alias cd read unalias wait umask getopts; do \
 		ln -sf neoash$(EXEEXT) '$(DESTDIR)$(bindir)/'$$u$(EXEEXT); \
 	done
-	for u in echo printf test kill; do \
+	for u in echo printf test kill pwd true false; do \
 		ln -sf neoash-$$u$(EXEEXT) '$(DESTDIR)$(bindir)/'$$u$(EXEEXT); \
 	done
 	ln -sf neoash-test$(EXEEXT) '$(DESTDIR)$(bindir)/['$(EXEEXT)
