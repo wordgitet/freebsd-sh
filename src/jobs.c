@@ -954,6 +954,7 @@ forkshell(struct job *jp, union node *n, int mode)
 	pid_t pid;
 	pid_t pgrp;
 	int async_ign;
+	int async_guard;
 	void (*saveint)(int), (*savequit)(int);
 
 	TRACE(("forkshell(%%%td, %p, %d) called\n", jp - jobtab, (void *)n,
@@ -966,12 +967,14 @@ forkshell(struct job *jp, union node *n, int mode)
 	flushall();
 	async_ign = !iflag && !mflag && (mode == FORK_BG ||
 	    (mode == FORK_FG && in_async_list()));
-	if (async_ign) {
+	/* A nested background fork must not discard a signal for its parent. */
+	async_guard = async_ign && !(mode == FORK_BG && in_async_list());
+	if (async_guard) {
 		saveint = signal(SIGINT, SIG_IGN);
 		savequit = signal(SIGQUIT, SIG_IGN);
 	}
 	pid = fork();
-	if (async_ign && pid != 0) {
+	if (async_guard && pid != 0) {
 		signal(SIGINT, saveint);
 		signal(SIGQUIT, savequit);
 	}
