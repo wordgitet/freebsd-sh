@@ -2345,7 +2345,6 @@ getprompt(void *unused __unused)
 	const char *fmt;
 	const char *home;
 	const char *pwd;
-	const char *expanded;
 	size_t homelen;
 	int i, trim;
 	static char internal_error[] = "??";
@@ -2366,11 +2365,6 @@ getprompt(void *unused __unused)
 	default:
 		return internal_error;
 	}
-
-	/* POSIX prompt strings undergo the normal parameter expansion. */
-	expanded = expandstr(fmt);
-	if (expanded != NULL)
-		fmt = expanded;
 
 #if !NEOASH_EXTENSIONS
 	strlcpy(ps, fmt, sizeof(ps));
