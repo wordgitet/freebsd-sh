@@ -1104,7 +1104,8 @@ varvalue(const char *name, int quoted, int subtype, int flag,
 		break;
 	case '?':
 		num = oexitstatus;
-		if (num >= 384)
+		/* POSIX 2008 exposes signal deaths as 128+signal. */
+		if (!NEOASH_HAS_POSIX_2024 && num >= 384)
 			num -= 256;
 		break;
 	case '#':

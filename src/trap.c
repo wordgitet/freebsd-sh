@@ -717,7 +717,9 @@ exitsig(int status)
 {
 	if (status >= 384 && status < 384 + NSIG)
 		return status - 384;
-	if (status >= 128 && status < 128 + NSIG)
+	/* Issue 8 reserves 128..255 for ordinary exit statuses. */
+	if (!NEOASH_HAS_POSIX_2024 && status >= 128 &&
+	    status < 128 + NSIG)
 		return status - 128;
 	return 0;
 }

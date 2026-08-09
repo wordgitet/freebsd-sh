@@ -1004,6 +1004,17 @@ forkshell(struct job *jp, union node *n, int mode)
 		closescript();
 		INTON;
 		forcelocal = 0;
+		/*
+		 * A foreground command in an asynchronous list was forked with
+		 * SIGINT and SIGQUIT temporarily ignored.  Restore the logical
+		 * dispositions before clear_traps(), or sigmode can falsely claim
+		 * that a caught signal is still installed and leave SIG_IGN in
+		 * place across exec.
+		 */
+		if (async_ign && mode == FORK_FG) {
+			signal(SIGINT, saveint);
+			signal(SIGQUIT, savequit);
+		}
 		clear_traps();
 #if JOBS
 		jobctl = 0;		/* do job control only in root shell */
