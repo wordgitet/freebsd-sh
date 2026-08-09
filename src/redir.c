@@ -256,9 +256,14 @@ openredirect(union node *redir, char memory[10])
 static void
 checkfdredirect(union node *redir)
 {
+	struct stat sb;
 	int flags;
 	int accmode;
 
+	if (fstat(redir->ndup.dupfd, &sb) < 0)
+		error("%d: %s", redir->ndup.dupfd, strerror(errno));
+	if (S_ISFIFO(sb.st_mode))
+		return;
 	flags = fcntl(redir->ndup.dupfd, F_GETFL, 0);
 	if (flags < 0)
 		error("%d: %s", redir->ndup.dupfd, strerror(errno));
