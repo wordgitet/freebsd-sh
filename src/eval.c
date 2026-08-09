@@ -475,7 +475,7 @@ evalsubshell(union node *n, int flags)
 	} else if (! backgnd) {
 		INTOFF;
 		exitstatus = waitforjob(jp, (int *)NULL,
-		    (flags & EV_TESTED) ? WFJ_UNTILDONE : 0);
+		    (flags & EV_TESTED) && !mflag ? WFJ_UNTILDONE : 0);
 		INTON;
 	} else
 		exitstatus = 0;
@@ -662,7 +662,7 @@ evalpipe(union node *n, int tested)
 	if (n->npipe.backgnd == 0) {
 		INTOFF;
 		exitstatus = waitforjob(jp, (int *)NULL,
-		    tested ? WFJ_UNTILDONE : 0);
+		    tested && !mflag ? WFJ_UNTILDONE : 0);
 		TRACE(("evalpipe:  job done exit status %d\n", exitstatus));
 		INTON;
 	} else
@@ -1432,7 +1432,7 @@ parent:	/* parent process gets here (if we forked) */
 	if (mode == FORK_FG) {	/* argument to fork */
 		INTOFF;
 		exitstatus = waitforjob(jp, &signaled,
-		    (flags & EV_TESTED) ? WFJ_UNTILDONE : 0);
+		    (flags & EV_TESTED) && !mflag ? WFJ_UNTILDONE : 0);
 		INTON;
 		if (iflag && loopnest > 0 && signaled) {
 			evalskip = SKIPBREAK;

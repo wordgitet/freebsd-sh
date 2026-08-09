@@ -986,7 +986,7 @@ forkshell(struct job *jp, union node *n, int mode)
 		int i;
 
 		TRACE(("Child shell %d\n", (int)getpid()));
-		if (mode == FORK_BG)
+		if (mode == FORK_BG && !iflag && !mflag)
 			enter_async_list();
 		if (!iflag && !mflag && (mode == FORK_BG ||
 		    (mode == FORK_FG && in_async_list()))) {
