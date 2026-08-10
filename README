@@ -9,19 +9,24 @@ Policy:
 
 This fork is POSIX-first.
 
-The yash POSIX suite under test-posix/yash is the primary correctness
-gate for the project. The imported FreeBSD sh regression suite under
-test-posix/freebsd is a secondary guardrail used to catch accidental
-breakage while POSIX fixes land.
+The licensed POSIX conformance suite, run from its private installation,
+is the release-blocking correctness gate. Its sources and journals are
+kept out of this repository.
 
-The Modernish suite under test-posix/modernish is an additional diagnostic
-suite. Its bug and quirk reports help find portability issues, but do not
-override the POSIX specification or the yash gate.
+The imported yash POSIX suite under test-posix/yash is the fast regression
+guardrail used while POSIX fixes land. The imported FreeBSD sh regression
+suite under test-posix/freebsd is a tertiary guardrail for accidental
+breakage in overlapping areas.
+
+The Modernish suite under test-posix/modernish and the Smoosh shell suite
+under test-posix/smoosh are additional diagnostics. Their bug, quirk, and
+shell-semantics reports help find portability issues, but do not override
+the POSIX specification or the licensed conformance results.
 
 When POSIX behavior conflicts with historical FreeBSD behavior, POSIX
 wins by default. Yash behavior and the POSIX text are the main
-day-to-day reference points for compliance work. Dash may be useful as
-an extra comparison point, but it is not the primary model.
+day-to-day reference points for compliance work. Other shells are useful
+as comparison points, but are not normative.
 
 
 Build:
@@ -50,6 +55,10 @@ Primary POSIX scoreboard:
 
 $ make TESTEE=./src/neoash test-posix-report
 
+The release gate is the private licensed POSIX conformance suite; use its
+journals to classify results as shell bugs, harness/environment issues, or
+untested cases.
+
 Faster non-signal POSIX pass:
 
 $ make TESTEE=./src/neoash test-posix-nosignal-report
@@ -61,6 +70,10 @@ $ make TESTEE=./src/neoash test-posix-freebsd
 Additional Modernish diagnostics:
 
 $ make TESTEE=./src/neoash test-posix-modernish
+
+Additional Smoosh shell diagnostics:
+
+$ make TESTEE=./src/neoash test-posix-smoosh
 
 Convenience aliases:
 
