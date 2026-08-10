@@ -1425,6 +1425,14 @@ The primary prompt string, which defaults to
 .Dq Li "$ " ,
 unless you are the superuser, in which case it defaults to
 .Dq Li "# " .
+Simple parameter references in the value of
+.Va PS1
+are expanded before the prompt is displayed.
+The supported forms are
+.Ql $name ,
+.Ql ${name}
+and positional or special parameters.
+Other word-expansion forms are not performed.
 .Va PS1
 may include any of the following formatting sequences,
 which are replaced by the given information:
@@ -1479,6 +1487,10 @@ Emits CRLF sequence.
 .It Va PS2
 The secondary prompt string, which defaults to
 .Dq Li "> " .
+Simple parameter references in the value of
+.Va PS2
+are expanded in the same way as for
+.Va PS1 .
 .Va PS2
 may include any of the formatting sequences from
 .Va PS1 .

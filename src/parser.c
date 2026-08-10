@@ -56,6 +56,7 @@
 #include "eval.h"
 #include "exec.h"	/* to check for special builtins */
 #include "jobs.h"
+#include "main.h"
 #ifndef NO_HISTORY
 #include "myhistedit.h"
 #endif
@@ -2345,6 +2346,8 @@ getprompt(void *unused __unused)
 	const char *fmt;
 	const char *home;
 	const char *pwd;
+	const char *value;
+	char valbuf[PROMPTLEN];
 	size_t homelen;
 	int i, trim;
 	static char internal_error[] = "??";
@@ -2366,16 +2369,176 @@ getprompt(void *unused __unused)
 		return internal_error;
 	}
 
-#if !NEOASH_EXTENSIONS
-	strlcpy(ps, fmt, sizeof(ps));
-	return ps;
-#endif
-
 	/*
 	 * Format prompt string.
 	 */
 	for (i = 0; (i < PROMPTLEN - 1) && (*fmt != '\0'); i++, fmt++) {
-		if (*fmt != '\\') {
+		if (*fmt == '$') {
+			const char *varname_start, *varname_end;
+			char varname[256];
+			int namelen, braced = 0;
+
+			fmt++;  /* Skip the '$'. */
+			if (*fmt == '{') {
+				braced = 1;
+				fmt++;
+			}
+			varname_start = fmt;
+
+			if (is_digit(*fmt)) {
+				/* ${10} is a multi-digit positional parameter. */
+				fmt++;
+				if (braced) {
+					while (is_digit(*fmt))
+						fmt++;
+				}
+				varname_end = fmt;
+			} else if (is_special(*fmt)) {
+				fmt++;
+				varname_end = fmt;
+			} else if (is_name(*fmt)) {
+				do
+					fmt++;
+				while (is_in_name(*fmt));
+				varname_end = fmt;
+			} else {
+				/* Preserve an invalid parameter reference literally. */
+				ps[i] = '$';
+				if (braced && i < PROMPTLEN - 2)
+					ps[++i] = '{';
+				fmt = varname_start - 1;
+				continue;
+			}
+
+			namelen = varname_end - varname_start;
+			if (namelen == 0 || namelen >= (int)sizeof(varname)) {
+				ps[i] = '$';
+				fmt = varname_start - 1;
+				continue;
+			}
+			memcpy(varname, varname_start, namelen);
+			varname[namelen] = '\0';
+
+			if (braced) {
+				if (*fmt == '}')
+					fmt++;
+				else {
+					/* Unsupported or malformed operators stay literal. */
+					ps[i] = '$';
+					if (i < PROMPTLEN - 2)
+						ps[++i] = '{';
+					fmt = varname_start - 1;
+					continue;
+				}
+			}
+
+			/*
+			 * Prompt expansion produces one bounded string, so $@ and $*
+			 * use the current IFS separator rather than field splitting.
+			 */
+			if (namelen == 1 &&
+			    (varname[0] == '@' || varname[0] == '*')) {
+				char *dst = valbuf;
+				char **ap;
+				const char *sep;
+
+				sep = ifsset() ? ifsval() : " ";
+				for (ap = shellparam.p; *ap != NULL; ap++) {
+					if (ap != shellparam.p) {
+						while (*sep != '\0' &&
+						    dst < valbuf + sizeof(valbuf) - 1)
+							*dst++ = *sep++;
+						sep = ifsset() ? ifsval() : " ";
+					}
+					value = *ap;
+					while (*value != '\0' &&
+					    dst < valbuf + sizeof(valbuf) - 1)
+						*dst++ = *value++;
+				}
+				*dst = '\0';
+				value = valbuf;
+			} else if (namelen == 1 && is_digit(varname[0])) {
+				long num = strtol(varname, NULL, 10);
+
+				if (num == 0)
+					value = arg0 != NULL ? arg0 : "";
+				else if (num > 0 && num <= shellparam.nparam)
+					value = shellparam.p[num - 1];
+				else
+					value = "";
+			} else if (namelen > 1 && is_digit(varname[0])) {
+				long num = strtol(varname, NULL, 10);
+
+				if (num == 0)
+					value = arg0 != NULL ? arg0 : "";
+				else if (num > 0 && num <= shellparam.nparam)
+					value = shellparam.p[num - 1];
+				else
+					value = "";
+			} else if (namelen == 1 && is_special(varname[0])) {
+				int num;
+				char *dst;
+
+				switch (varname[0]) {
+				case '$':
+					num = (int)rootpid;
+					(void)snprintf(valbuf, sizeof(valbuf), "%d", num);
+					value = valbuf;
+					break;
+				case '?':
+					num = oexitstatus;
+					if (!NEOASH_HAS_POSIX_2024 && num >= 384)
+						num -= 256;
+					(void)snprintf(valbuf, sizeof(valbuf), "%d", num);
+					value = valbuf;
+					break;
+				case '#':
+					num = shellparam.nparam;
+					(void)snprintf(valbuf, sizeof(valbuf), "%d", num);
+					value = valbuf;
+					break;
+				case '!':
+					if (!backgndpidset()) {
+						value = "";
+						break;
+					}
+					num = (int)backgndpidval();
+					(void)snprintf(valbuf, sizeof(valbuf), "%d", num);
+					value = valbuf;
+					break;
+				case '-':
+					dst = valbuf;
+					for (num = 0; num < NSHORTOPTS; num++) {
+						if (optval[num] &&
+						    dst < valbuf + sizeof(valbuf) - 1)
+							*dst++ = optletter[num];
+					}
+					*dst = '\0';
+					value = valbuf;
+					break;
+				default:
+					value = "";
+					break;
+				}
+			} else {
+				value = lookupvar(varname);
+				if (value == NULL)
+					value = "";
+			}
+
+			while (*value != '\0' && i < PROMPTLEN - 1)
+				ps[i++] = *value++;
+			fmt--;
+			i--;
+			continue;
+		}
+#if !NEOASH_EXTENSIONS
+		else {
+			ps[i] = *fmt;
+			continue;
+		}
+#else
+		else if (*fmt != '\\') {
 			ps[i] = *fmt;
 			continue;
 		}
@@ -2548,6 +2711,7 @@ getprompt(void *unused __unused)
 				ps[++i] = *fmt;
 			break;
 		}
+#endif
 
 	}
 	ps[i] = '\0';
