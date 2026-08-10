@@ -954,7 +954,8 @@ forkshell(struct job *jp, union node *n, int mode)
 	pid_t pid;
 	pid_t pgrp;
 	int async_ign;
-	void (*saveint)(int), (*savequit)(int);
+	int async_guard;
+	void (*saveint)(int) = SIG_DFL, (*savequit)(int) = SIG_DFL;
 
 	TRACE(("forkshell(%%%td, %p, %d) called\n", jp - jobtab, (void *)n,
 	    mode));
@@ -966,14 +967,18 @@ forkshell(struct job *jp, union node *n, int mode)
 	flushall();
 	async_ign = !iflag && !mflag && (mode == FORK_BG ||
 	    (mode == FORK_FG && in_async_list()));
-	if (async_ign) {
+	/* Do not mask a signal already addressed to an async parent. */
+	async_guard = async_ign && !(mode == FORK_BG && in_async_list());
+	if (async_guard) {
 		saveint = signal(SIGINT, SIG_IGN);
 		savequit = signal(SIGQUIT, SIG_IGN);
 	}
 	pid = fork();
-	if (async_ign && pid != 0) {
-		signal(SIGINT, saveint);
-		signal(SIGQUIT, savequit);
+	if (async_guard) {
+		if (pid != 0) {
+			signal(SIGINT, saveint);
+			signal(SIGQUIT, savequit);
+		}
 	}
 	if (pid == -1) {
 		TRACE(("Fork failed, errno=%d\n", errno));
