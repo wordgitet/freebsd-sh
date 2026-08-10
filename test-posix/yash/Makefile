@@ -120,7 +120,8 @@ clean-results:
 		$(POSIX_REPORT_CSV) $(POSIX_REPORT_MD) \
 		$(POSIX_NOSIGNAL_REPORT_CSV) $(POSIX_NOSIGNAL_REPORT_MD) \
 		report*.stamp \
-		*.out *.err *.valgrind tmp.*
+		*.out *.err *.valgrind
+	rm -rf tmp.*
 
 clean: clean-results
 	rm -f $(TESTERS)

@@ -1,4 +1,4 @@
-AC_INIT([neoash], [15.1-ver51])
+AC_INIT([neoash], [15.1-ver52])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config-compat.h])
@@ -156,10 +156,12 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])],
     [flag_probe="-Werror=unknown-warning-option"; AC_MSG_RESULT([yes])],
     [flag_probe=""; AC_MSG_RESULT([no])])
 CFLAGS="$save_CFLAGS"
-for flag in -Wno-unknown-warning-option \
-            -Wno-unused-result \
-            -Wno-string-plus-int \
-            -Wno-clobbered; do
+warning_flags="-Wno-unused-result -Wno-clobbered"
+if test -n "$flag_probe"; then
+    AX_CFLAGS="$AX_CFLAGS -Wno-unknown-warning-option"
+    warning_flags="$warning_flags -Wno-string-plus-int"
+fi
+for flag in $warning_flags; do
     AC_MSG_CHECKING([if compiler supports $flag])
     save_CFLAGS="$CFLAGS"
     CFLAGS="$CFLAGS $flag_probe $flag"

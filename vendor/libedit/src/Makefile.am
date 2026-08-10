@@ -56,4 +56,4 @@ nobase_include_HEADERS = histedit.h editline/readline.h
 
 nodist_libedit_la_SOURCES = $(BUILT_SOURCES)
 
-libedit_la_LDFLAGS = -no-undefined -version-info $(LT_VERSION)
+libedit_la_LDFLAGS = -no-undefined

@@ -1933,7 +1933,7 @@ parsesub: {
 	int subtype;
 	int typeloc;
 	int flags;
-	char *p;
+	const char *p;
 	static const char types[] = "}-+?=";
 	int linno;
 	int length;

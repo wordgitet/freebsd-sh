@@ -63,10 +63,6 @@
 #define MEM_OUT -2		/* output to dynamically allocated memory */
 #define OUTPUT_ERR 01		/* error occurred on output */
 
-#ifndef __APPLE__
-static ssize_t doformat_wr(void *, const char *, size_t);
-#endif
-
 struct output output = {NULL, NULL, NULL, OUTBUFSIZ, 1, 0};
 struct output errout = {NULL, NULL, NULL, 256, 2, 0};
 struct output memout = {NULL, NULL, NULL, 64, MEM_OUT, 0};
@@ -340,6 +336,8 @@ static cookie_io_functions_t func = {
 };
 #endif
 
+#if !defined(HAVE_FUNOPEN) && \
+    (!defined(HAVE_FOPENCOOKIE) || defined(__sun) || defined(__sun__))
 static void
 doformat_vasprintf(struct output *dest, const char *f, va_list ap)
 {
@@ -352,6 +350,7 @@ doformat_vasprintf(struct output *dest, const char *f, va_list ap)
 		free(buf);
 	}
 }
+#endif
 
 void
 doformat(struct output *dest, const char *f, va_list ap)
