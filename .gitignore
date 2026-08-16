@@ -71,6 +71,9 @@
 /src/neoash-kill
 /src/neoash-printf
 /src/neoash-test
+/src/neoash-pwd
+/src/neoash-true
+/src/neoash-false
 
 # yash POSIX suite local build artifacts
 /test-posix/yash/selfsig
